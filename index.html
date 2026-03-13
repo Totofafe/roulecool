@@ -811,7 +811,10 @@ dz.addEventListener('drop', e => {
 document.getElementById('btnSend').addEventListener('click', sendToGrist);
 
 // Chargement initial des stats (après que config.js soit chargé)
-setTimeout(loadMapData, 800);
+setTimeout(() => {
+  map.invalidateSize();
+  loadMapData();
+}, 800);
 </script>
 </body>
 </html>
