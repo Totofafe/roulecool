@@ -483,9 +483,7 @@ window.GRIST_CONFIG = {
 (function() {
   const s = document.createElement('script');
   s.src = 'config.js';
-  s.onerror = () => {
-    document.getElementById('apiFallback').classList.add('visible');
-  };
+s.onerror = () => {};
   s.onload = () => {
     if (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) {
       // config.js a écrasé GRIST_CONFIG
@@ -664,9 +662,7 @@ function handleFile(file) {
 // ── ENVOI VERS GRIST ─────────────────────────────────────
 async function sendToGrist() {
   const pseudo = document.getElementById('inputPseudo').value.trim() || 'anonyme';
-const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey)
-             || document.getElementById('inputApiKey').value.trim()
-             || "proxy";
+const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || "proxy";
 
   const points = processedPoints.map(p => ({ ...p, pseudo }));
   const BATCH = 50;
@@ -715,8 +711,7 @@ const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey)
 
 // ── STATS GLOBALES ───────────────────────────────────────
 async function loadGlobalStats() {
-  const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey)
-               || document.getElementById('inputApiKey').value.trim();
+  const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || "proxy";
   if (!apiKey) return;
 
   try {
