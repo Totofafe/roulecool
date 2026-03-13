@@ -11,8 +11,8 @@
  */
 
 const SEUILS = {
-  confortable: 5.0,   // vibration < 5.0  → Confortable (vert foncé)
-  acceptable:  9.0,   // vibration < 9.0  → Acceptable  (vert clair)
+  confortable: 3.0,   // vibration < 5.0  → Confortable (vert foncé)
+  acceptable:  6.0,   // vibration < 9.0  → Acceptable  (vert clair)
                       // vibration >= 9.0 → Inconfortable (rouge)
 
   labels: {
