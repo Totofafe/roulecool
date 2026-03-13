@@ -674,13 +674,9 @@ function handleFile(file) {
 // ── ENVOI VERS GRIST ─────────────────────────────────────
 async function sendToGrist() {
   const pseudo = document.getElementById('inputPseudo').value.trim() || 'anonyme';
-  const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey)
-               || document.getElementById('inputApiKey').value.trim();
-
-  if (!apiKey) {
-    setStatus('error', '⚠️ Clé API manquante (config.js ou champ de saisie).');
-    return;
-  }
+const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey)
+             || document.getElementById('inputApiKey').value.trim()
+             || "proxy";
 
   const points = processedPoints.map(p => ({ ...p, pseudo }));
   const BATCH = 50;
