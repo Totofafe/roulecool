@@ -24,13 +24,15 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: 'DM Mono', monospace;
-      background: var(--gris-fond);
-      color: var(--texte);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+body {
+  font-family: 'DM Mono', monospace;
+  background: var(--gris-fond);
+  color: var(--texte);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
     }
 
     /* ── HEADER ── */
@@ -84,8 +86,9 @@
 .main {
   display: grid;
   grid-template-columns: 380px 1fr;
-  flex: 1;
+  width: 100%;
   height: calc(100vh - 65px);
+  overflow: hidden;
 }
 
     /* ── PANEL GAUCHE ── */
@@ -461,7 +464,7 @@
       </div>
     </div>
 
-  </div>
+  </div><!-- fin .panel -->
 
   <!-- ── CARTE ── -->
   <div id="map"></div>
