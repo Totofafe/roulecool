@@ -607,7 +607,10 @@ function showPreview(points) {
   }
 
   const bounds = points.map(p => [p.latitude, p.longitude]);
+  setTimeout(() => {
+  map.invalidateSize();
   map.fitBounds(bounds, { padding: [40, 40] });
+}, 100);
   map.invalidateSize();
 }
 
@@ -813,8 +816,8 @@ document.getElementById('btnSend').addEventListener('click', sendToGrist);
 // Chargement initial des stats (après que config.js soit chargé)
 setTimeout(() => {
   map.invalidateSize();
-  loadMapData();
-}, 300);
+  setTimeout(loadMapData, 500);
+}, 500);
 
 window.addEventListener('resize', () => map.invalidateSize());
 </script>
