@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <script src="seuils.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -204,23 +205,24 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 19
 }).addTo(map);
 
-// Légende
+// Légende dynamique depuis seuils.js
 const legend = L.control({ position: 'bottomright' });
 legend.onAdd = () => {
+  const t = getLegendText();
   const div = L.DomUtil.create('div', 'legend');
   div.innerHTML = `
     <h4>🎯 RouleCool</h4>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#2E7D32"></div>
-      Confortable <span class="legend-seuil">&lt; 5 m/s²</span>
+      <div class="legend-dot" style="background:${SEUILS.couleurs.confortable}"></div>
+      Confortable <span class="legend-seuil">${t.confortable}</span>
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#A5D6A7"></div>
-      Acceptable <span class="legend-seuil">5–9 m/s²</span>
+      <div class="legend-dot" style="background:${SEUILS.couleurs.acceptable}"></div>
+      Acceptable <span class="legend-seuil">${t.acceptable}</span>
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:#F44336"></div>
-      Inconfortable <span class="legend-seuil">&gt; 9 m/s²</span>
+      <div class="legend-dot" style="background:${SEUILS.couleurs.inconfortable}"></div>
+      Inconfortable <span class="legend-seuil">${t.inconfortable}</span>
     </div>
   `;
   return div;

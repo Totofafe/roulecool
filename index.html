@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="seuils.js"></script>
   <style>
     :root {
       --vert-fonce:   #2E7D32;
@@ -449,17 +450,17 @@ body {
         <div class="legende-item">
           <div class="legende-dot" style="background:var(--vert-fonce)"></div>
           Confortable
-          <span class="legende-seuil">&lt; 5 m/s²</span>
+          <span class="legende-seuil" id="legendConf"></span>
         </div>
         <div class="legende-item">
           <div class="legende-dot" style="background:var(--vert-clair)"></div>
           Acceptable
-          <span class="legende-seuil">5 – 9 m/s²</span>
+          <span class="legende-seuil" id="legendAcce"></span>
         </div>
         <div class="legende-item">
           <div class="legende-dot" style="background:var(--rouge)"></div>
           Inconfortable
-          <span class="legende-seuil">&gt; 9 m/s²</span>
+          <span class="legende-seuil" id="legendInco"></span>
         </div>
       </div>
     </div>
@@ -507,18 +508,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 let previewLayer = null;
 let processedPoints = [];
 
-// ── SCORING ─────────────────────────────────────────────
-function getScore(vibration) {
-  if (vibration < 8.0)  return 'Confortable';
-  if (vibration < 14.0) return 'Acceptable';
-  return 'Inconfortable';
-}
-
-function getColor(score) {
-  return score === 'Confortable' ? '#2E7D32'
-       : score === 'Acceptable'  ? '#A5D6A7'
-       : '#F44336';
-}
+// ── SCORING — défini dans seuils.js ─────────────────────
 
 // ── TRAITEMENT JSON ──────────────────────────────────────
 function processJSON(data, filename) {
@@ -824,6 +814,14 @@ setTimeout(() => {
 }, 500);
 
 window.addEventListener('resize', () => map.invalidateSize());
+
+// ── INIT LÉGENDE depuis seuils.js ────────────────────────
+window.addEventListener('load', () => {
+  const t = getLegendText();
+  document.getElementById('legendConf').innerHTML = t.confortable;
+  document.getElementById('legendAcce').innerHTML = t.acceptable;
+  document.getElementById('legendInco').innerHTML = t.inconfortable;
+});
 </script>
 </body>
 </html>
