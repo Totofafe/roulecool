@@ -733,6 +733,67 @@ function setStatus(type, msg) {
   el.textContent = msg;
 }
 
+// ── CHARGEMENT DONNÉES COLLABORATIVES ────────────────────
+async function loadMapData() {
+  const url = `${window.GRIST_CONFIG.baseUrl}/docs/${window.GRIST_CONFIG.docId}/tables/${window.GRIST_CONFIG.table}/records?limit=50000`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    const records = data.records || [];
+
+    if (records.length === 0) return;
+
+    // Regrouper par nom_trajet
+    const trajets = {};
+    for (const r of records) {
+      const f = r.fields;
+      const key = `${f.pseudo || 'anonyme'}__${f.nom_trajet || 'trajet'}__${f.date_trajet || ''}`;
+      if (!trajets[key]) trajets[key] = [];
+      trajets[key].push(f);
+    }
+
+    // Couche dédiée aux données collaboratives
+    const collaboLayer = L.layerGroup().addTo(map);
+
+    for (const [key, points] of Object.entries(trajets)) {
+      const [pseudo, nom, date] = key.split('__');
+
+      // Trier par ordre d'enregistrement (index dans le tableau)
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+
+        if (!p1.latitude || !p2.latitude) continue;
+
+        L.polyline(
+          [[p1.latitude, p1.longitude], [p2.latitude, p2.longitude]],
+          { color: p1.couleur || '#999', weight: 5, opacity: 0.7 }
+        ).bindPopup(`
+          <div style="font-family:Arial;font-size:12px;">
+            <b>${p1.score || ''}</b><br>
+            Vibration : ${(p1.vibration || 0).toFixed(2)} m/s²<br>
+            Vitesse : ${(p1.vitesse || 0).toFixed(1)} km/h<br>
+            <hr style="margin:5px 0">
+            <i style="color:#666;font-size:11px;">
+              ${pseudo} · ${nom}<br>${date}
+            </i>
+          </div>
+        `).addTo(collaboLayer);
+      }
+    }
+
+    // Stats header
+    const pseudos = new Set(records.map(r => r.fields.pseudo).filter(Boolean));
+    document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
+    document.getElementById('total-contribs').textContent = pseudos.size;
+
+  } catch(e) {
+    console.warn('Erreur chargement carte collaborative :', e);
+  }
+}
+
 // ── EVENTS ───────────────────────────────────────────────
 document.getElementById('fileInput').addEventListener('change', e => {
   handleFile(e.target.files[0]);
@@ -750,7 +811,7 @@ dz.addEventListener('drop', e => {
 document.getElementById('btnSend').addEventListener('click', sendToGrist);
 
 // Chargement initial des stats (après que config.js soit chargé)
-setTimeout(loadGlobalStats, 800);
+setTimeout(loadMapData, 800);
 </script>
 </body>
 </html>
