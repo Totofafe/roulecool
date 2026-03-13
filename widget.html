@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RouleCool — Widget Carte Grist</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: #f0f0f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── TOOLBAR ── */
+    #toolbar {
+      background: #222;
+      border-bottom: 1px solid #333;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+      z-index: 1000;
+    }
+
+    .toolbar-label {
+      font-size: 0.7rem;
+      color: #888;
+      white-space: nowrap;
+    }
+
+    select {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      color: #f0f0f0;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select:focus { border-color: #2E7D32; }
+
+    .sep {
+      width: 1px;
+      height: 20px;
+      background: #444;
+      flex-shrink: 0;
+    }
+
+    /* ── STATS ── */
+    #stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .stat {
+      font-size: 0.7rem;
+      color: #888;
+      white-space: nowrap;
+    }
+
+    .stat span {
+      color: #A5D6A7;
+      font-weight: bold;
+    }
+
+    /* ── CONFORT MINI BAR ── */
+    .mini-bar {
+      display: flex;
+      height: 6px;
+      width: 80px;
+      border-radius: 3px;
+      overflow: hidden;
+      gap: 1px;
+      align-self: center;
+    }
+
+    .mini-bar div { border-radius: 1px; }
+
+    /* ── CARTE ── */
+    #map {
+      flex: 1;
+      width: 100%;
+    }
+
+    .leaflet-container { background: #1a1a1a; }
+
+    /* ── LÉGENDE ── */
+    .legend {
+      background: rgba(30,30,30,0.92);
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #f0f0f0;
+      line-height: 22px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    .legend h4 {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      color: #A5D6A7;
+      letter-spacing: 0.05em;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-seuil {
+      color: #666;
+      font-size: 10px;
+      margin-left: auto;
+      padding-left: 8px;
+    }
+
+    /* ── LOADING ── */
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(30,30,30,0.95);
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px 30px;
+      font-size: 0.85rem;
+      color: #A5D6A7;
+      z-index: 2000;
+      display: none;
+    }
+
+    #loading.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- ── TOOLBAR ── -->
+<div id="toolbar">
+  <span class="toolbar-label">Contributeur</span>
+  <select id="filterPseudo">
+    <option value="">Tous</option>
+  </select>
+
+  <div class="sep"></div>
+
+  <span class="toolbar-label">Date</span>
+  <select id="filterDate">
+    <option value="">Toutes</option>
+  </select>
+
+  <div class="sep"></div>
+
+  <div class="mini-bar" id="miniBar">
+    <div id="mbConf" style="background:#2E7D32;width:33%"></div>
+    <div id="mbAcce" style="background:#A5D6A7;width:33%"></div>
+    <div id="mbInco" style="background:#F44336;width:34%"></div>
+  </div>
+
+  <div id="stats-bar">
+    <div class="stat">Points : <span id="statPoints">—</span></div>
+    <div class="stat">Trajets : <span id="statTrajets">—</span></div>
+    <div class="stat">Contributeurs : <span id="statContribs">—</span></div>
+    <div class="stat">🟢 <span id="statConf">—</span>%</div>
+    <div class="stat">🟩 <span id="statAcce">—</span>%</div>
+    <div class="stat">🔴 <span id="statInco">—</span>%</div>
+  </div>
+</div>
+
+<!-- ── CARTE ── -->
+<div id="map"></div>
+<div id="loading">⏳ Chargement des données…</div>
+
+<script>
+// ── CARTE ────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([48.8566, 2.3522], 12);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19
+}).addTo(map);
+
+// Légende
+const legend = L.control({ position: 'bottomright' });
+legend.onAdd = () => {
+  const div = L.DomUtil.create('div', 'legend');
+  div.innerHTML = `
+    <h4>🎯 RouleCool</h4>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#2E7D32"></div>
+      Confortable <span class="legend-seuil">&lt; 5 m/s²</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#A5D6A7"></div>
+      Acceptable <span class="legend-seuil">5–9 m/s²</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#F44336"></div>
+      Inconfortable <span class="legend-seuil">&gt; 9 m/s²</span>
+    </div>
+  `;
+  return div;
+};
+legend.addTo(map);
+
+// ── ÉTAT ─────────────────────────────────────────────────
+let allRecords = [];
+let mapLayer   = null;
+
+// ── GRIST API ────────────────────────────────────────────
+grist.ready({
+  requiredAccess: 'read table',
+  columns: [
+    { name: 'latitude',    type: 'Numeric' },
+    { name: 'longitude',   type: 'Numeric' },
+    { name: 'vibration',   type: 'Numeric' },
+    { name: 'score',       type: 'Text'    },
+    { name: 'couleur',     type: 'Text'    },
+    { name: 'vitesse',     type: 'Numeric' },
+    { name: 'pseudo',      type: 'Text'    },
+    { name: 'date_trajet', type: 'Text'    },
+    { name: 'nom_trajet',  type: 'Text'    },
+  ]
+});
+
+grist.onRecords(records => {
+  allRecords = records;
+  updateFilters(records);
+  renderMap(records);
+});
+
+// ── FILTRES ───────────────────────────────────────────────
+function updateFilters(records) {
+  const pseudos = [...new Set(records.map(r => r.pseudo).filter(Boolean))].sort();
+  const dates   = [...new Set(records.map(r => r.date_trajet).filter(Boolean))].sort().reverse();
+
+  const selP = document.getElementById('filterPseudo');
+  const selD = document.getElementById('filterDate');
+
+  const prevP = selP.value;
+  const prevD = selD.value;
+
+  selP.innerHTML = '<option value="">Tous</option>'
+    + pseudos.map(p => `<option value="${p}" ${p===prevP?'selected':''}>${p}</option>`).join('');
+
+  selD.innerHTML = '<option value="">Toutes</option>'
+    + dates.map(d => `<option value="${d}" ${d===prevD?'selected':''}>${d}</option>`).join('');
+}
+
+function getFiltered() {
+  const pseudo = document.getElementById('filterPseudo').value;
+  const date   = document.getElementById('filterDate').value;
+  return allRecords.filter(r =>
+    (!pseudo || r.pseudo === pseudo) &&
+    (!date   || r.date_trajet === date)
+  );
+}
+
+// ── RENDU CARTE ──────────────────────────────────────────
+function renderMap(records) {
+  if (mapLayer) map.removeLayer(mapLayer);
+  mapLayer = L.layerGroup().addTo(map);
+
+  if (records.length === 0) return;
+
+  // Regrouper par trajet
+  const trajets = {};
+  for (const r of records) {
+    const key = `${r.pseudo||'?'}__${r.nom_trajet||'?'}__${r.date_trajet||'?'}`;
+    if (!trajets[key]) trajets[key] = [];
+    trajets[key].push(r);
+  }
+
+  const allBounds = [];
+
+  for (const [key, pts] of Object.entries(trajets)) {
+    const [pseudo, nom, date] = key.split('__');
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p1 = pts[i], p2 = pts[i+1];
+      if (!p1.latitude || !p2.latitude) continue;
+
+      allBounds.push([p1.latitude, p1.longitude]);
+
+      L.polyline(
+        [[p1.latitude, p1.longitude], [p2.latitude, p2.longitude]],
+        { color: p1.couleur || '#999', weight: 6, opacity: 0.8 }
+      ).bindPopup(`
+        <div style="font-family:Arial;font-size:12px;min-width:180px;">
+          <b style="font-size:13px;">${p1.score || '—'}</b><br>
+          <hr style="margin:5px 0;border-color:#ddd;">
+          Vibration : <b>${(p1.vibration||0).toFixed(2)} m/s²</b><br>
+          Vitesse : ${(p1.vitesse||0).toFixed(1)} km/h<br>
+          <hr style="margin:5px 0;border-color:#ddd;">
+          <i style="color:#666;font-size:11px;">
+            👤 ${pseudo}<br>
+            📍 ${nom}<br>
+            📅 ${date}
+          </i>
+        </div>
+      `).addTo(mapLayer);
+    }
+  }
+
+  // Ajuster la vue
+  if (allBounds.length > 0) {
+    map.fitBounds(allBounds, { padding: [30, 30] });
+  }
+
+  // Mettre à jour les stats
+  updateStats(records, Object.keys(trajets).length);
+}
+
+// ── STATS ────────────────────────────────────────────────
+function updateStats(records, nbTrajets) {
+  const total   = records.length;
+  const pseudos = new Set(records.map(r => r.pseudo).filter(Boolean));
+  const nConf   = records.filter(r => r.score === 'Confortable').length;
+  const nAcce   = records.filter(r => r.score === 'Acceptable').length;
+  const nInco   = records.filter(r => r.score === 'Inconfortable').length;
+
+  document.getElementById('statPoints').textContent   = total.toLocaleString('fr');
+  document.getElementById('statTrajets').textContent  = nbTrajets;
+  document.getElementById('statContribs').textContent = pseudos.size;
+  document.getElementById('statConf').textContent     = total ? Math.round(100*nConf/total) : 0;
+  document.getElementById('statAcce').textContent     = total ? Math.round(100*nAcce/total) : 0;
+  document.getElementById('statInco').textContent     = total ? Math.round(100*nInco/total) : 0;
+
+  // Mini barre
+  if (total > 0) {
+    document.getElementById('mbConf').style.width = (100*nConf/total) + '%';
+    document.getElementById('mbAcce').style.width = (100*nAcce/total) + '%';
+    document.getElementById('mbInco').style.width = (100*nInco/total) + '%';
+  }
+}
+
+// ── EVENTS FILTRES ────────────────────────────────────────
+document.getElementById('filterPseudo').addEventListener('change', () => {
+  renderMap(getFiltered());
+});
+
+document.getElementById('filterDate').addEventListener('change', () => {
+  renderMap(getFiltered());
+});
+
+// ── RESIZE ───────────────────────────────────────────────
+window.addEventListener('resize', () => map.invalidateSize());
+setTimeout(() => map.invalidateSize(), 300);
+</script>
+</body>
+</html>
