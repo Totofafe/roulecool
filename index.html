@@ -608,6 +608,7 @@ function showPreview(points) {
 
   const bounds = points.map(p => [p.latitude, p.longitude]);
   map.fitBounds(bounds, { padding: [40, 40] });
+  map.invalidateSize();
 }
 
 // ── CHARGEMENT FICHIER ───────────────────────────────────
@@ -813,7 +814,9 @@ document.getElementById('btnSend').addEventListener('click', sendToGrist);
 setTimeout(() => {
   map.invalidateSize();
   loadMapData();
-}, 800);
+}, 300);
+
+window.addEventListener('resize', () => map.invalidateSize());
 </script>
 </body>
 </html>
