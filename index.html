@@ -564,7 +564,7 @@ function processJSON(data, filename) {
       couleur:     getColor(score),
       vitesse:     Math.round(gps.speed * 10) / 10,
       pseudo:      '',
-      date_trajet: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      date_trajet: new Date(gps.time / 1e6).toISOString().slice(0, 16).replace('T', ' '),
       nom_trajet:  filename.replace('.json', '').replace(/_/g, ' ').trim()
     };
   });
