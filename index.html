@@ -905,24 +905,9 @@ async function chargerPanoramax() {
   if (panoramaxLayer) { map.removeLayer(panoramaxLayer); panoramaxLayer = null; }
   if (!panoramaxActif) return;
 
-  // Bbox englobant tous les tracés visibles
-  const layers = [];
-  map.eachLayer(l => { if (l instanceof L.Polyline) layers.push(l); });
-  if (layers.length === 0) return;
-
-  let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
-  layers.forEach(l => {
-    l.getLatLngs().forEach(pt => {
-      const p = Array.isArray(pt) ? pt : [pt];
-      p.forEach(c => {
-        minLat = Math.min(minLat, c.lat); maxLat = Math.max(maxLat, c.lat);
-        minLon = Math.min(minLon, c.lng); maxLon = Math.max(maxLon, c.lng);
-      });
-    });
-  });
-
-  const marge = 0.0005;
-  const bbox = `${minLon-marge},${minLat-marge},${maxLon+marge},${maxLat+marge}`;
+  // Utiliser les bounds visibles de la carte
+  const bounds = map.getBounds();
+  const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
 
   try {
     const res = await fetch(`${PANORAMAX_API}?bbox=${bbox}&limit=200`);
@@ -987,6 +972,9 @@ document.getElementById('btnPanoramax').addEventListener('click', () => {
     if (panoramaxLayer) { map.removeLayer(panoramaxLayer); panoramaxLayer = null; }
   }
 });
+
+// Recharger si la vue change (et si actif)
+map.on('moveend', () => { if (panoramaxActif) chargerPanoramax(); });
 </script>
 </body>
 </html>
