@@ -931,7 +931,7 @@ async function chargerPanoramax() {
       const date    = f.properties?.datetime?.slice(0, 10) || '—';
       const { bg, label } = couleurMarqueur(f.properties?.datetime);
       const imgUrl  = `https://api.panoramax.xyz/api/pictures/${uuid}/sd.jpg`;
-      const viewUrl = `https://panoramax.xyz/#focus=pic&map=17/${lat}/${lon}&pic=${uuid}`;
+      const viewUrl = `https://api.panoramax.xyz/#focus=pic&pic=${uuid}`;
 
       L.marker([lat, lon], { icon: makeCameraIcon(bg) })
         .bindPopup(`
