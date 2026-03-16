@@ -41,7 +41,7 @@ body {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 18px 32px;
+      padding: 10px 24px;
       border-bottom: 1px solid var(--gris-border);
       background: var(--gris-carte);
       position: sticky;
@@ -75,7 +75,7 @@ body {
     .header-stats {
       font-size: 0.75rem;
       color: var(--texte-dim);
-      text-align: right;
+      text-align: center;
     }
 
     .header-stats span {
@@ -86,9 +86,9 @@ body {
     /* ── LAYOUT ── */
 .main {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 320px 1fr;
   width: 100%;
-  height: calc(100vh - 65px);
+  height: calc(100vh - 50px);
   overflow: hidden;
 }
 
@@ -102,29 +102,32 @@ body {
     }
 
     .panel-section {
-      padding: 24px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--gris-border);
     }
 
     .panel-section h2 {
       font-family: 'Syne', sans-serif;
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       font-weight: 600;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--texte-dim);
-      margin-bottom: 16px;
+      margin-bottom: 8px;
     }
 
     /* ── DROP ZONE ── */
     .drop-zone {
       border: 2px dashed var(--gris-border);
       border-radius: 8px;
-      padding: 32px 20px;
+      padding: 12px 16px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
       position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .drop-zone:hover, .drop-zone.dragover {
@@ -142,26 +145,27 @@ body {
     }
 
     .drop-icon {
-      font-size: 2rem;
-      margin-bottom: 10px;
-      display: block;
+      font-size: 1.4rem;
+      flex-shrink: 0;
     }
 
     .drop-title {
       font-family: 'Syne', sans-serif;
       font-weight: 600;
-      font-size: 0.95rem;
-      margin-bottom: 6px;
+      font-size: 0.82rem;
+      margin-bottom: 2px;
+      text-align: left;
     }
 
     .drop-sub {
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       color: var(--texte-dim);
+      text-align: left;
     }
 
     /* ── FORM ── */
     .field {
-      margin-bottom: 14px;
+      margin-bottom: 8px;
     }
 
     .field label {
@@ -177,7 +181,7 @@ body {
       background: var(--gris-carte);
       border: 1px solid var(--gris-border);
       border-radius: 6px;
-      padding: 10px 12px;
+      padding: 7px 10px;
       color: var(--texte);
       font-family: 'DM Mono', monospace;
       font-size: 0.82rem;
@@ -265,14 +269,14 @@ body {
     /* ── BOUTON ENVOYER ── */
     .btn-send {
       width: 100%;
-      padding: 14px;
+      padding: 10px;
       background: var(--vert-fonce);
       color: white;
       border: none;
       border-radius: 8px;
       font-family: 'Syne', sans-serif;
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       letter-spacing: 0.05em;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -410,9 +414,12 @@ body {
     RouleCool
   </div>
   <div class="header-stats">
-    Points en base : <span id="total-points">—</span><br>
+    Points en base : <span id="total-points">—</span> &nbsp;|&nbsp;
     Contributeurs : <span id="total-contribs">—</span>
   </div>
+  <button class="btn-panoramax" id="btnPanoramax" style="margin-left:auto;">
+    📷 Panoramax
+  </button>
 </header>
 
 <div class="main">
@@ -427,8 +434,10 @@ body {
       <div class="drop-zone" id="dropZone">
         <input type="file" id="fileInput" accept=".json">
         <span class="drop-icon">🚴</span>
-        <div class="drop-title">Glissez votre fichier JSON</div>
-        <div class="drop-sub">Export Sensor Logger · Android</div>
+        <div>
+          <div class="drop-title">Glissez votre fichier JSON</div>
+          <div class="drop-sub">Export Sensor Logger · Android / iOS</div>
+        </div>
       </div>
 
       <!-- Preview après chargement -->
@@ -471,17 +480,6 @@ body {
       </div>
 
       <div class="status" id="statusMsg"></div>
-    </div>
-
-    <!-- Panoramax -->
-    <div class="panel-section">
-      <h2>Photos de rue</h2>
-      <button class="btn-panoramax" id="btnPanoramax">
-        📷 Afficher photos Panoramax
-      </button>
-      <div style="font-size:0.68rem;color:var(--texte-dim);margin-top:8px;">
-        Photos géolocalisées © contributeurs Panoramax
-      </div>
     </div>
 
     <!-- Légende -->
@@ -964,11 +962,11 @@ document.getElementById('btnPanoramax').addEventListener('click', () => {
   const btn = document.getElementById('btnPanoramax');
   if (panoramaxActif) {
     btn.classList.add('active');
-    btn.textContent = '📷 Masquer photos Panoramax';
+    btn.textContent = '📷 Masquer';
     chargerPanoramax();
   } else {
     btn.classList.remove('active');
-    btn.textContent = '📷 Afficher photos Panoramax';
+    btn.textContent = '📷 Panoramax';
     if (panoramaxLayer) { map.removeLayer(panoramaxLayer); panoramaxLayer = null; }
   }
 });
