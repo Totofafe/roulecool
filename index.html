@@ -370,6 +370,36 @@ body {
       color: var(--texte-dim);
       margin-top: 5px;
     }
+
+    /* ── PANORAMAX ── */
+    .btn-panoramax {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      color: #4a9eda;
+      border: 1px solid #4a9eda;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-panoramax:hover { background: rgba(74,158,218,0.1); }
+    .btn-panoramax.active { background: #4a9eda; color: white; }
+
+    .panoramax-popup img {
+      width: 100%;
+      max-width: 260px;
+      border-radius: 4px;
+      margin-top: 6px;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -441,6 +471,17 @@ body {
       </div>
 
       <div class="status" id="statusMsg"></div>
+    </div>
+
+    <!-- Panoramax -->
+    <div class="panel-section">
+      <h2>Photos de rue</h2>
+      <button class="btn-panoramax" id="btnPanoramax">
+        📷 Afficher photos Panoramax
+      </button>
+      <div style="font-size:0.68rem;color:var(--texte-dim);margin-top:8px;">
+        Photos géolocalisées © contributeurs Panoramax
+      </div>
     </div>
 
     <!-- Légende -->
@@ -821,6 +862,130 @@ window.addEventListener('load', () => {
   document.getElementById('legendConf').innerHTML = t.confortable;
   document.getElementById('legendAcce').innerHTML = t.acceptable;
   document.getElementById('legendInco').innerHTML = t.inconfortable;
+});
+
+// ── PANORAMAX ────────────────────────────────────────────
+const PANORAMAX_API = 'https://panoramax.ign.fr/api/search';
+let panoramaxLayer  = null;
+let panoramaxActif  = false;
+
+// Couleur du marqueur selon ancienneté de la photo
+function couleurMarqueur(dateStr) {
+  if (!dateStr) return { bg: '#888888', label: 'Date inconnue' };
+  const mois = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24 * 30);
+  if (mois < 6)  return { bg: '#1565C0', label: 'Récente (< 6 mois)' };   // bleu foncé
+  if (mois < 18) return { bg: '#F9A825', label: 'Moyenne (6-18 mois)' };  // jaune
+  return           { bg: '#424242', label: 'Ancienne (> 18 mois)' };      // gris foncé
+}
+
+function makeCameraIcon(bg) {
+  return L.divIcon({
+    html: `<div style="background:${bg};border:2px solid white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,0.35);">📷</div>`,
+    className: '',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+}
+
+// Dédoublonnage : grille ~50m, 1 photo par cellule (la plus récente)
+function dedoublonner(features) {
+  const grille = {};
+  features.forEach(f => {
+    const [lon, lat] = f.geometry.coordinates;
+    const cle = `${Math.round(lat * 1000)}_${Math.round(lon * 1000)}`; // ~100m
+    const date = f.properties?.datetime || '';
+    if (!grille[cle] || date > grille[cle].properties.datetime) {
+      grille[cle] = f;
+    }
+  });
+  return Object.values(grille);
+}
+
+async function chargerPanoramax() {
+  if (panoramaxLayer) { map.removeLayer(panoramaxLayer); panoramaxLayer = null; }
+  if (!panoramaxActif) return;
+
+  // Bbox englobant tous les tracés visibles
+  const layers = [];
+  map.eachLayer(l => { if (l instanceof L.Polyline) layers.push(l); });
+  if (layers.length === 0) return;
+
+  let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+  layers.forEach(l => {
+    l.getLatLngs().forEach(pt => {
+      const p = Array.isArray(pt) ? pt : [pt];
+      p.forEach(c => {
+        minLat = Math.min(minLat, c.lat); maxLat = Math.max(maxLat, c.lat);
+        minLon = Math.min(minLon, c.lng); maxLon = Math.max(maxLon, c.lng);
+      });
+    });
+  });
+
+  const marge = 0.0005;
+  const bbox = `${minLon-marge},${minLat-marge},${maxLon+marge},${maxLat+marge}`;
+
+  try {
+    const res = await fetch(`${PANORAMAX_API}?bbox=${bbox}&limit=200`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const brutes = data.features || [];
+
+    if (brutes.length === 0) {
+      setStatus('loading', '📷 Aucune photo Panoramax dans cette zone.');
+      setTimeout(() => setStatus('', ''), 3000);
+      return;
+    }
+
+    // Dédoublonner + garder la plus récente par zone
+    const features = dedoublonner(brutes);
+    panoramaxLayer = L.layerGroup().addTo(map);
+
+    features.forEach(f => {
+      const [lon, lat] = f.geometry.coordinates;
+      const uuid    = f.id;
+      const date    = f.properties?.datetime?.slice(0, 10) || '—';
+      const { bg, label } = couleurMarqueur(f.properties?.datetime);
+      const imgUrl  = f.assets?.sd?.href || f.assets?.thumb?.href || '';
+      const viewUrl = `https://panoramax.ign.fr/#focus=pic&map=17/${lat}/${lon}&pic=${uuid}`;
+
+      L.marker([lat, lon], { icon: makeCameraIcon(bg) })
+        .bindPopup(`
+          <div style="font-family:Arial;font-size:12px;min-width:200px;">
+            <b>📷 Photo Panoramax</b><br>
+            <span style="color:#666;font-size:11px;">📅 ${date} — ${label}</span><br>
+            <img src="${imgUrl}" alt="Photo Panoramax"
+                 onerror="this.style.display='none'"
+                 style="width:100%;max-width:260px;border-radius:4px;margin-top:6px;">
+            <div style="margin-top:6px;">
+              <a href="${viewUrl}" target="_blank" style="color:#4a9eda;font-size:11px;">
+                Voir sur Panoramax ↗
+              </a>
+            </div>
+          </div>
+        `, { maxWidth: 280 })
+        .addTo(panoramaxLayer);
+    });
+
+    setStatus('success', `📷 ${features.length} photos Panoramax (${brutes.length} brutes).`);
+    setTimeout(() => setStatus('', ''), 4000);
+
+  } catch(e) {
+    setStatus('error', '❌ Erreur Panoramax : ' + e.message);
+  }
+}
+
+document.getElementById('btnPanoramax').addEventListener('click', () => {
+  panoramaxActif = !panoramaxActif;
+  const btn = document.getElementById('btnPanoramax');
+  if (panoramaxActif) {
+    btn.classList.add('active');
+    btn.textContent = '📷 Masquer photos Panoramax';
+    chargerPanoramax();
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '📷 Afficher photos Panoramax';
+    if (panoramaxLayer) { map.removeLayer(panoramaxLayer); panoramaxLayer = null; }
+  }
 });
 </script>
 </body>
