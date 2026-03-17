@@ -581,7 +581,9 @@ function processJSON(data, filename) {
 
   // Fusionner GPS + accéléromètre le plus proche
   const accelTimes = Object.keys(accelMap).map(Number).sort((a, b) => a - b);
-
+  
+  const dateDepart = new Date(gpsPoints[0].time / 1e6).toISOString().slice(0, 16).replace('T', ' ');
+  
   const points = gpsPoints.map(gps => {
     // Recherche binaire du timestamp accéléromètre le plus proche
     let lo = 0, hi = accelTimes.length - 1, best = 0;
@@ -603,8 +605,8 @@ function processJSON(data, filename) {
       couleur:     getColor(score),
       vitesse:     Math.round(gps.speed * 10) / 10,
       pseudo:      '',
-      date_trajet: new Date(gps.time / 1e6).toISOString().slice(0, 16).replace('T', ' '),
-      nom_trajet:  filename.replace('.json', '').replace(/_/g, ' ').trim()
+      date_trajet: dateDepart,
+	  nom_trajet:  filename.replace('.json', '').replace(/_/g, ' ').trim()
     };
   });
 
