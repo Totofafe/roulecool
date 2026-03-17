@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RouleCool — Calibration des seuils</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <style>
+    :root {
+      --vert:    #2E7D32;
+      --vert-cl: #A5D6A7;
+      --rouge:   #F44336;
+      --fond:    #0f0f0f;
+      --panel:   #161616;
+      --border:  #2a2a2a;
+      --texte:   #e8e8e8;
+      --dim:     #666;
+      --accent:  #A5D6A7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--fond);
+      color: var(--texte);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--accent);
+      letter-spacing: -0.01em;
+    }
+
+    .header-count {
+      font-size: 0.7rem;
+      color: var(--dim);
+    }
+
+    .header-count span { color: var(--accent); }
+
+    /* ── LAYOUT ── */
+    .main {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ── PANEL GAUCHE : SLIDERS ── */
+    .controls {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .ctrl-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .ctrl-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    /* Slider seuil */
+    .seuil-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .seuil-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .seuil-name {
+      font-size: 0.75rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .seuil-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .seuil-val {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--texte);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--fond);
+      box-shadow: 0 0 6px rgba(165,214,167,0.4);
+      cursor: pointer;
+    }
+
+    #sliderConf::-webkit-slider-thumb { background: var(--vert); box-shadow: 0 0 6px rgba(46,125,50,0.5); }
+    #sliderAcce::-webkit-slider-thumb { background: var(--vert-cl); }
+
+    /* ── RÉPARTITION ── */
+    .repartition {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .rep-bar-wrap {
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .rep-bar-conf { background: var(--vert); border-radius: 2px; transition: width 0.2s; }
+    .rep-bar-acce { background: var(--vert-cl); border-radius: 2px; transition: width 0.2s; }
+    .rep-bar-inco { background: var(--rouge); border-radius: 2px; transition: width 0.2s; }
+
+    .rep-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 4px;
+    }
+
+    .rep-stat {
+      text-align: center;
+      font-size: 0.68rem;
+      color: var(--dim);
+    }
+
+    .rep-stat strong {
+      display: block;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    .rep-stat.conf strong { color: var(--vert); }
+    .rep-stat.acce strong { color: var(--vert-cl); }
+    .rep-stat.inco strong { color: var(--rouge); }
+
+    /* ── CODE EXPORT ── */
+    .export-box {
+      background: #0a1a0a;
+      border: 1px solid var(--vert);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .export-box pre {
+      font-size: 0.65rem;
+      color: #81c784;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .btn-copy {
+      width: 100%;
+      margin-top: 8px;
+      padding: 7px;
+      background: var(--vert);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-copy:hover { background: #388E3C; }
+    .btn-copy.copied { background: #1B5E20; }
+
+    /* ── GRAPHIQUES ── */
+    .charts {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .chart-wrap {
+      flex: 1;
+      min-height: 0;
+      padding: 16px 20px 8px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .chart-wrap:last-child { border-bottom: none; }
+
+    .chart-title {
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    canvas {
+      flex: 1;
+      min-height: 0;
+      width: 100% !important;
+    }
+
+    /* ── LOADING ── */
+    .loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--fond);
+      font-size: 0.8rem;
+      color: var(--dim);
+      z-index: 100;
+    }
+
+    .loading.hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">🎛️ RouleCool — Calibration des seuils</div>
+  <div class="header-count">Points chargés : <span id="nbPoints">—</span></div>
+</div>
+
+<div class="main">
+
+  <!-- ── CONTRÔLES ── -->
+  <div class="controls">
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Seuils de vibration (m/s²)</div>
+
+      <div class="seuil-block">
+        <div class="seuil-header">
+          <div class="seuil-name">
+            <div class="seuil-dot" style="background:var(--vert)"></div>
+            Confortable
+          </div>
+          <div class="seuil-val" id="valConf">3.0</div>
+        </div>
+        <input type="range" id="sliderConf" min="0.5" max="15" step="0.5" value="3">
+        <div style="font-size:0.62rem;color:var(--dim);">vibration &lt; <span id="labelConf">3.0</span> m/s²</div>
+      </div>
+
+      <div class="seuil-block">
+        <div class="seuil-header">
+          <div class="seuil-name">
+            <div class="seuil-dot" style="background:var(--vert-cl)"></div>
+            Acceptable
+          </div>
+          <div class="seuil-val" id="valAcce">6.0</div>
+        </div>
+        <input type="range" id="sliderAcce" min="1" max="25" step="0.5" value="6">
+        <div style="font-size:0.62rem;color:var(--dim);"><span id="labelConf2">3.0</span> – <span id="labelAcce">6.0</span> m/s²</div>
+      </div>
+
+      <div class="seuil-block">
+        <div class="seuil-header">
+          <div class="seuil-name">
+            <div class="seuil-dot" style="background:var(--rouge)"></div>
+            Inconfortable
+          </div>
+          <div class="seuil-val" style="color:var(--rouge);">&gt; <span id="labelAcce2">6.0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Répartition -->
+    <div class="ctrl-section">
+      <div class="ctrl-label">Répartition actuelle</div>
+      <div class="repartition">
+        <div class="rep-bar-wrap">
+          <div class="rep-bar-conf" id="barConf" style="width:33%"></div>
+          <div class="rep-bar-acce" id="barAcce" style="width:33%"></div>
+          <div class="rep-bar-inco" id="barInco" style="width:34%"></div>
+        </div>
+        <div class="rep-stats">
+          <div class="rep-stat conf"><strong id="pctConf">—</strong>Conf.</div>
+          <div class="rep-stat acce"><strong id="pctAcce">—</strong>Accep.</div>
+          <div class="rep-stat inco"><strong id="pctInco">—</strong>Inconf.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="ctrl-section">
+      <div class="ctrl-label">Code à reporter dans seuils.js</div>
+      <div class="export-box">
+        <pre id="exportCode">confortable: 3.0,
+acceptable:  6.0,</pre>
+      </div>
+      <button class="btn-copy" id="btnCopy" onclick="copierCode()">
+        📋 Copier
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ── GRAPHIQUES ── -->
+  <div class="charts">
+    <div class="chart-wrap">
+      <div class="chart-title">Distribution des vibrations (histogramme)</div>
+      <canvas id="canvasHisto"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Vibration par point (ordre chronologique)</div>
+      <canvas id="canvasScatter"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<div class="loading" id="loading">⏳ Chargement des données depuis Grist…</div>
+
+<script>
+// ── ÉTAT ─────────────────────────────────────────────────
+let allVibrations = [];
+let sConf = 3.0;
+let sAcce = 6.0;
+
+// ── GRIST ────────────────────────────────────────────────
+grist.ready({
+  requiredAccess: 'read table',
+  columns: [
+    { name: 'vibration', type: 'Numeric' },
+    { name: 'score',     type: 'Text'    },
+  ]
+});
+
+grist.onRecords(records => {
+  allVibrations = records
+    .map(r => parseFloat(r.vibration))
+    .filter(v => !isNaN(v) && v >= 0);
+
+  document.getElementById('nbPoints').textContent = allVibrations.length.toLocaleString('fr');
+  document.getElementById('loading').classList.add('hidden');
+
+  mettreAJour();
+});
+
+// ── SLIDERS ──────────────────────────────────────────────
+document.getElementById('sliderConf').addEventListener('input', function() {
+  sConf = parseFloat(this.value);
+  // Empêcher sConf >= sAcce
+  if (sConf >= sAcce) {
+    sAcce = sConf + 0.5;
+    document.getElementById('sliderAcce').value = sAcce;
+  }
+  mettreAJour();
+});
+
+document.getElementById('sliderAcce').addEventListener('input', function() {
+  sAcce = parseFloat(this.value);
+  // Empêcher sAcce <= sConf
+  if (sAcce <= sConf) {
+    sConf = sAcce - 0.5;
+    document.getElementById('sliderConf').value = sConf;
+  }
+  mettreAJour();
+});
+
+// ── MISE À JOUR GLOBALE ───────────────────────────────────
+function mettreAJour() {
+  // Labels
+  document.getElementById('valConf').textContent    = sConf.toFixed(1);
+  document.getElementById('valAcce').textContent    = sAcce.toFixed(1);
+  document.getElementById('labelConf').textContent  = sConf.toFixed(1);
+  document.getElementById('labelConf2').textContent = sConf.toFixed(1);
+  document.getElementById('labelAcce').textContent  = sAcce.toFixed(1);
+  document.getElementById('labelAcce2').textContent = sAcce.toFixed(1);
+
+  // Répartition
+  if (allVibrations.length > 0) {
+    const nC = allVibrations.filter(v => v < sConf).length;
+    const nA = allVibrations.filter(v => v >= sConf && v < sAcce).length;
+    const nI = allVibrations.filter(v => v >= sAcce).length;
+    const total = allVibrations.length;
+
+    const pC = Math.round(100 * nC / total);
+    const pA = Math.round(100 * nA / total);
+    const pI = 100 - pC - pA;
+
+    document.getElementById('barConf').style.width  = pC + '%';
+    document.getElementById('barAcce').style.width  = pA + '%';
+    document.getElementById('barInco').style.width  = pI + '%';
+    document.getElementById('pctConf').textContent  = pC + '%';
+    document.getElementById('pctAcce').textContent  = pA + '%';
+    document.getElementById('pctInco').textContent  = pI + '%';
+  }
+
+  // Export code
+  document.getElementById('exportCode').textContent =
+    `confortable: ${sConf.toFixed(1)},\nacceptable:  ${sAcce.toFixed(1)},`;
+
+  // Graphiques
+  dessinerHisto();
+  dessinerScatter();
+}
+
+// ── HISTOGRAMME ───────────────────────────────────────────
+let histoChart = null;
+
+function dessinerHisto() {
+  if (allVibrations.length === 0) return;
+
+  const canvas = document.getElementById('canvasHisto');
+  const ctx = canvas.getContext('2d');
+
+  const maxV = Math.min(Math.max(...allVibrations) * 1.05, 30);
+  const nbBins = 40;
+  const binSize = maxV / nbBins;
+
+  // Remplir les bins
+  const bins = Array(nbBins).fill(0);
+  allVibrations.forEach(v => {
+    const i = Math.min(Math.floor(v / binSize), nbBins - 1);
+    bins[i]++;
+  });
+
+  const labels = Array.from({ length: nbBins }, (_, i) => (i * binSize).toFixed(1));
+
+  // Couleur selon seuils
+  const colors = bins.map((_, i) => {
+    const mid = (i + 0.5) * binSize;
+    if (mid < sConf)  return 'rgba(46,125,50,0.85)';
+    if (mid < sAcce)  return 'rgba(165,214,167,0.85)';
+    return 'rgba(244,67,54,0.85)';
+  });
+
+  if (histoChart) histoChart.destroy();
+
+  histoChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: bins,
+        backgroundColor: colors,
+        borderWidth: 0,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 150 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => `Vibration ≈ ${items[0].label} m/s²`,
+            label: (item) => `${item.raw} points`
+          },
+          backgroundColor: '#1a1a1a',
+          titleColor: '#A5D6A7',
+          bodyColor: '#e8e8e8',
+          borderColor: '#333',
+          borderWidth: 1,
+        },
+        // Lignes de seuil via annotation plugin (simulé manuellement)
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#555',
+            font: { size: 9, family: 'DM Mono' },
+            maxTicksLimit: 10,
+          },
+          grid: { color: '#1a1a1a' },
+          title: {
+            display: true,
+            text: 'Vibration (m/s²)',
+            color: '#555',
+            font: { size: 10, family: 'DM Mono' }
+          }
+        },
+        y: {
+          ticks: { color: '#555', font: { size: 9, family: 'DM Mono' } },
+          grid: { color: '#222' },
+          title: {
+            display: true,
+            text: 'Nb points',
+            color: '#555',
+            font: { size: 10, family: 'DM Mono' }
+          }
+        }
+      }
+    },
+    plugins: [{
+      // Plugin maison pour tracer les lignes de seuil
+      id: 'seuilLines',
+      afterDraw(chart) {
+        const { ctx, scales } = chart;
+        const xConf = scales.x.getPixelForValue((sConf / binSize).toFixed(0));
+        const xAcce = scales.x.getPixelForValue((sAcce / binSize).toFixed(0));
+        const top   = scales.y.top;
+        const bot   = scales.y.bottom;
+
+        [[xConf, '#2E7D32', `< ${sConf}`], [xAcce, '#A5D6A7', `< ${sAcce}`]].forEach(([x, color, label]) => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(x, top);
+          ctx.lineTo(x, bot);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+          ctx.fillStyle = color;
+          ctx.font = 'bold 10px DM Mono';
+          ctx.fillText(label, x + 4, top + 12);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+// ── SCATTER ───────────────────────────────────────────────
+let scatterChart = null;
+
+function dessinerScatter() {
+  if (allVibrations.length === 0) return;
+
+  const canvas = document.getElementById('canvasScatter');
+  const ctx = canvas.getContext('2d');
+
+  // Sous-échantillonner si trop de points (max 1000 pour perf)
+  const step = Math.max(1, Math.floor(allVibrations.length / 1000));
+  const data = allVibrations
+    .filter((_, i) => i % step === 0)
+    .map((v, i) => ({
+      x: i * step,
+      y: v,
+      color: v < sConf ? 'rgba(46,125,50,0.7)' : v < sAcce ? 'rgba(165,214,167,0.7)' : 'rgba(244,67,54,0.7)'
+    }));
+
+  if (scatterChart) scatterChart.destroy();
+
+  scatterChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        data: data.map(d => ({ x: d.x, y: d.y })),
+        backgroundColor: data.map(d => d.color),
+        pointRadius: 2,
+        pointHoverRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 0 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (item) => `point #${item.raw.x} — ${item.raw.y.toFixed(2)} m/s²`
+          },
+          backgroundColor: '#1a1a1a',
+          titleColor: '#A5D6A7',
+          bodyColor: '#e8e8e8',
+          borderColor: '#333',
+          borderWidth: 1,
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#555', font: { size: 9, family: 'DM Mono' }, maxTicksLimit: 8 },
+          grid: { color: '#1a1a1a' },
+          title: { display: true, text: 'Index point', color: '#555', font: { size: 10 } }
+        },
+        y: {
+          ticks: { color: '#555', font: { size: 9, family: 'DM Mono' } },
+          grid: { color: '#222' },
+          title: { display: true, text: 'Vibration (m/s²)', color: '#555', font: { size: 10 } }
+        }
+      }
+    },
+    plugins: [{
+      id: 'seuilLinesScatter',
+      afterDraw(chart) {
+        const { ctx, scales } = chart;
+        const left  = scales.x.left;
+        const right = scales.x.right;
+
+        [[sConf, '#2E7D32'], [sAcce, '#A5D6A7']].forEach(([val, color]) => {
+          const y = scales.y.getPixelForValue(val);
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(left, y);
+          ctx.lineTo(right, y);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+          ctx.fillStyle = color;
+          ctx.font = 'bold 9px DM Mono';
+          ctx.fillText(`${val} m/s²`, right - 50, y - 3);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+// ── COPIER CODE ───────────────────────────────────────────
+function copierCode() {
+  const code = `confortable: ${sConf.toFixed(1)},\nacceptable:  ${sAcce.toFixed(1)},`;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.getElementById('btnCopy');
+    btn.textContent = '✅ Copié !';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copier';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>
+
+<!-- Chart.js depuis CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+</body>
+</html>
