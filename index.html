@@ -46,7 +46,7 @@ body {
       background: var(--gris-carte);
       position: sticky;
       top: 0;
-      z-index: 9998;
+      z-index: 1000;
     }
 
     .logo {
@@ -377,6 +377,7 @@ body {
 
     /* ── PANORAMAX ── */
     .btn-panoramax {
+      width: 100%;
       padding: 10px;
       background: transparent;
       color: #4a9eda;
@@ -391,8 +392,6 @@ body {
       align-items: center;
       justify-content: center;
       gap: 8px;
-      margin-left: auto;
-      white-space: nowrap;
     }
 
     .btn-panoramax:hover { background: rgba(74,158,218,0.1); }
@@ -406,134 +405,89 @@ body {
       display: block;
     }
 
-    /* ── RESPONSIVE : BARRE D'ONGLETS MOBILE ── */
-    .tab-bar {
-      display: none;
-    }
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
 
-    /* ── TABLETTE (768px - 1024px) ── */
+    /* Tab bar : cachée par défaut (desktop) */
+    .tab-bar { display: none; }
+
+    /* ── TABLETTE 768-1024px ── */
     @media (max-width: 1024px) and (min-width: 768px) {
-      .main {
-        grid-template-columns: 260px 1fr;
-        height: calc(100vh - 50px);
-      }
-      .header-stats {
-        font-size: 0.68rem;
-      }
+      .main { grid-template-columns: 260px 1fr; }
+      .header-stats { font-size: 0.68rem; }
     }
 
-    /* ── MOBILE (< 768px) ── */
+    /* ── MOBILE < 768px ── */
     @media (max-width: 767px) {
 
+      /* Header compact, hauteur fixe */
       header {
         padding: 0 12px;
-        height: 48px;
-        min-height: 48px;
+        height: 44px;
+        min-height: 44px;
         flex-shrink: 0;
-        gap: 8px;
+        z-index: 9000;
       }
 
-      .logo {
-        font-size: 1rem;
-        gap: 6px;
-        flex-shrink: 0;
-      }
+      .logo { font-size: 1rem; gap: 6px; }
+      .logo-dot { width: 8px; height: 8px; }
+      .header-stats { display: none; }
 
-      .logo-dot {
-        width: 8px; height: 8px;
-      }
-
-      .header-stats {
-        display: none;
-      }
-
+      /* Bouton Panoramax dans le header */
       .btn-panoramax {
-        font-size: 0.68rem;
-        padding: 5px 8px;
-        width: auto;
-        flex-shrink: 0;
+        width: auto !important;
+        padding: 5px 10px !important;
+        font-size: 0.7rem !important;
         white-space: nowrap;
-        margin-left: auto;
+        flex-shrink: 0;
       }
 
-      /* Layout mobile : colonne unique */
+      /* Layout : flex colonne, la carte prend tout */
       .main {
-        display: block;
-        position: relative;
-        height: calc(100vh - 48px - 54px);
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 44px - 54px);
         overflow: hidden;
+        position: relative;
       }
 
-      .panel.tab-active {
-        display: flex;
+      /* Carte plein écran dans .main */
+      #map {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+
+      /* Panel par-dessus la carte quand actif */
+      .panel {
+        display: none;
+        position: absolute;
+        inset: 0;
+        overflow-y: auto;
+        z-index: 50;
+        border-right: none;
         flex-direction: column;
       }
 
-      /* Carte = plein écran, z-index bas */
-      #map {
-        position: fixed;
-        top: 48px;
-        left: 0; right: 0;
-        bottom: 54px;
-        height: auto;
-        display: block;
-        z-index: 10;
-      }
+      .panel.tab-active { display: flex; }
 
-      #map.tab-hidden {
-        display: none;
-      }
+      /* Sections selon onglet */
+      [data-tab] { display: none; }
+      [data-tab].visible { display: block; }
 
-      /* Panel aussi en fixed pour cohérence */
-      .panel {
-        display: none;
-        position: fixed;
-        top: 48px;
-        left: 0; right: 0;
-        bottom: 54px;
-        overflow-y: auto;
-        z-index: 100;
-        border-right: none;
-        height: auto;
-      }
+      /* Éléments tactiles agrandis */
+      .panel-section { padding: 14px 16px; }
+      .drop-zone { padding: 16px; }
+      .drop-icon { font-size: 1.8rem; }
+      .field input { padding: 12px 14px; font-size: 1rem; }
+      .btn-send { padding: 14px; font-size: 1rem; }
+      .legende-item { font-size: 0.9rem; padding: 3px 0; }
+      .legende-dot { width: 16px; height: 16px; }
 
-      /* Sections dans le panel mobile : plus d'espace */
-      .panel-section {
-        padding: 14px 16px;
-      }
-
-      /* Drop zone plus grande sur mobile pour faciliter le tap */
-      .drop-zone {
-        padding: 18px 16px;
-      }
-
-      .drop-icon {
-        font-size: 1.8rem;
-      }
-
-      /* Champ pseudo plus grand */
-      .field input {
-        padding: 12px 14px;
-        font-size: 1rem;
-      }
-
-      /* Bouton contribuer plus grand */
-      .btn-send {
-        padding: 14px;
-        font-size: 1rem;
-      }
-
-      /* Légende plus lisible */
-      .legende-item {
-        font-size: 0.9rem;
-        padding: 4px 0;
-      }
-
-      .legende-dot {
-        width: 16px; height: 16px;
-      }
-
-      /* ── BARRE D'ONGLETS ── */
+      /* Barre d'onglets fixée en bas */
       .tab-bar {
         display: flex;
         position: fixed;
@@ -553,35 +507,16 @@ body {
         gap: 2px;
         background: none;
         border: none;
+        border-top: 2px solid transparent;
         color: var(--texte-dim);
         font-family: 'DM Mono', monospace;
         font-size: 0.6rem;
         cursor: pointer;
         transition: color 0.2s;
-        padding: 6px 0;
-        border-top: 2px solid transparent;
       }
 
-      .tab-btn .tab-icon {
-        font-size: 1.2rem;
-        line-height: 1;
-      }
-
-      .tab-btn.active {
-        color: var(--accent);
-        border-top-color: var(--accent);
-      }
-
-      /* Sections légende uniquement dans l'onglet Légende */
-      .panel-section-legende {
-        display: block;
-      }
-
-      /* Aide Sensor Logger compacte sur mobile */
-      .aide-sensor {
-        font-size: 0.78rem;
-        line-height: 1.5;
-      }
+      .tab-btn .tab-icon { font-size: 1.2rem; line-height: 1; }
+      .tab-btn.active { color: var(--accent); border-top-color: var(--accent); }
     }
   </style>
 </head>
@@ -596,7 +531,7 @@ body {
     Points en base : <span id="total-points">—</span> &nbsp;|&nbsp;
     Contributeurs : <span id="total-contribs">—</span>
   </div>
-  <button class="btn-panoramax" id="btnPanoramax">
+  <button class="btn-panoramax" id="btnPanoramax" style="margin-left:auto;">
     📷 Panoramax
   </button>
 </header>
@@ -604,9 +539,9 @@ body {
 <div class="main">
 
   <!-- ── PANEL GAUCHE ── -->
-  <div class="panel" id="panel">
+  <div class="panel">
 
-    <!-- Dépôt JSON (onglet Dépôt) -->
+    <!-- Dépôt JSON -->
     <div class="panel-section" data-tab="depot">
       <h2>Déposer un trajet</h2>
 
@@ -636,7 +571,7 @@ body {
       </div>
     </div>
 
-    <!-- Infos contributeur (onglet Dépôt) -->
+    <!-- Infos contributeur -->
     <div class="panel-section" data-tab="depot">
       <h2>Votre identité</h2>
       <div class="field">
@@ -645,7 +580,7 @@ body {
       </div>
     </div>
 
-    <!-- Envoyer (onglet Dépôt) -->
+    <!-- Envoyer -->
     <div class="panel-section" data-tab="depot">
       <button class="btn-send" id="btnSend" disabled>
         <span>↑</span> Contribuer à la carte
@@ -661,7 +596,7 @@ body {
       <div class="status" id="statusMsg"></div>
     </div>
 
-    <!-- Légende (onglet Légende) -->
+    <!-- Légende -->
     <div class="panel-section" data-tab="legende">
       <h2>Légende</h2>
       <div class="legende">
@@ -683,10 +618,10 @@ body {
       </div>
     </div>
 
-    <!-- Aide Sensor Logger (onglet Légende) -->
+    <!-- Aide Sensor Logger -->
     <div class="panel-section" data-tab="legende">
       <h2>Configuration Sensor Logger</h2>
-      <div class="aide-sensor" style="font-size:0.75rem;color:var(--texte-dim);line-height:1.6;">
+      <div style="font-size:0.75rem;color:var(--texte-dim);line-height:1.6;">
         <div style="margin-bottom:8px;">
           <span style="color:var(--accent);font-weight:600;">Capteurs à activer</span><br>
           ✅ Location (GPS) · ✅ Accelerometer
@@ -697,11 +632,11 @@ body {
         </div>
         <div style="margin-bottom:8px;">
           <span style="color:var(--accent);font-weight:600;">Autorisations</span><br>
-          Android : localisation <em>Toujours</em><br>
-          iOS : localisation <em>Toujours</em> + arrière-plan
+          Android : <em>Toujours autoriser</em><br>
+          iOS : <em>Toujours</em> + arrière-plan activé
         </div>
         <div style="font-size:0.68rem;border-top:1px solid var(--gris-border);padding-top:8px;">
-          💡 Export au format JSON · Démarrer avant de partir
+          💡 Export JSON · Démarrer avant de partir
         </div>
       </div>
     </div>
@@ -714,18 +649,15 @@ body {
 </div>
 
 <!-- ── BARRE D'ONGLETS MOBILE ── -->
-<nav class="tab-bar" id="tabBar">
-  <button class="tab-btn" id="tabCarte" onclick="switchTab('carte')">
-    <span class="tab-icon">🗺️</span>
-    Carte
+<nav class="tab-bar">
+  <button class="tab-btn active" id="tabCarte" onclick="switchTab('carte')">
+    <span class="tab-icon">🗺️</span>Carte
   </button>
   <button class="tab-btn" id="tabDepot" onclick="switchTab('depot')">
-    <span class="tab-icon">🚴</span>
-    Dépôt
+    <span class="tab-icon">🚴</span>Dépôt
   </button>
   <button class="tab-btn" id="tabLegende" onclick="switchTab('legende')">
-    <span class="tab-icon">📋</span>
-    Légende
+    <span class="tab-icon">📋</span>Légende
   </button>
 </nav>
 
@@ -799,7 +731,9 @@ function processJSON(data, filename) {
 
   // Fusionner GPS + accéléromètre le plus proche
   const accelTimes = Object.keys(accelMap).map(Number).sort((a, b) => a - b);
-
+  
+  const dateDepart = new Date(gpsPoints[0].time / 1e6).toISOString().slice(0, 16).replace('T', ' ');
+  
   const points = gpsPoints.map(gps => {
     // Recherche binaire du timestamp accéléromètre le plus proche
     let lo = 0, hi = accelTimes.length - 1, best = 0;
@@ -821,8 +755,8 @@ function processJSON(data, filename) {
       couleur:     getColor(score),
       vitesse:     Math.round(gps.speed * 10) / 10,
       pseudo:      '',
-      date_trajet: new Date(gps.time / 1e6).toISOString().slice(0, 16).replace('T', ' '),
-      nom_trajet:  filename.replace('.json', '').replace(/_/g, ' ').trim()
+      date_trajet: dateDepart,
+	  nom_trajet:  filename.replace('.json', '').replace(/_/g, ' ').trim()
     };
   });
 
@@ -1080,54 +1014,6 @@ window.addEventListener('load', () => {
   document.getElementById('legendInco').innerHTML = t.inconfortable;
 });
 
-// ── ONGLETS MOBILE ───────────────────────────────────────
-let ongletActif = 'carte';
-
-function switchTab(tab) {
-  ongletActif = tab;
-  const panel = document.getElementById('panel');
-  const mapDiv = document.getElementById('map');
-
-  // Mettre à jour les boutons
-  ['carte', 'depot', 'legende'].forEach(t => {
-    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
-    if (btn) btn.classList.toggle('active', t === tab);
-  });
-
-  if (tab === 'carte') {
-    panel.classList.remove('tab-active');
-    mapDiv.classList.remove('tab-hidden');
-    setTimeout(() => map.invalidateSize(), 100);
-  } else {
-    panel.classList.add('tab-active');
-    mapDiv.classList.add('tab-hidden');
-
-    // Afficher/masquer les sections selon l'onglet
-    document.querySelectorAll('.panel-section[data-tab]').forEach(el => {
-      el.style.display = el.dataset.tab === tab ? '' : 'none';
-    });
-  }
-}
-
-// Initialiser : onglet Carte actif par défaut
-window.addEventListener('load', () => {
-  if (window.innerWidth < 768) {
-    document.getElementById('tabCarte').classList.add('active');
-  }
-});
-
-// Sur desktop, toujours afficher toutes les sections
-window.addEventListener('resize', () => {
-  if (window.innerWidth >= 768) {
-    document.querySelectorAll('.panel-section[data-tab]').forEach(el => {
-      el.style.display = '';
-    });
-    document.getElementById('panel').classList.remove('tab-active');
-    document.getElementById('map').classList.remove('tab-hidden');
-  }
-  map.invalidateSize();
-});
-
 // ── PANORAMAX ────────────────────────────────────────────
 const PANORAMAX_API = 'https://api.panoramax.xyz/api/search';
 let panoramaxLayer  = null;
@@ -1239,6 +1125,46 @@ document.getElementById('btnPanoramax').addEventListener('click', () => {
 
 // Recharger si la vue change (et si actif)
 map.on('moveend', () => { if (panoramaxActif) chargerPanoramax(); });
+
+// ── ONGLETS MOBILE ───────────────────────────────────────
+function switchTab(tab) {
+  if (window.innerWidth >= 768) return;
+
+  const panel = document.querySelector('.panel');
+  const mapDiv = document.getElementById('map');
+
+  // Boutons
+  ['carte','depot','legende'].forEach(t => {
+    const id = 'tab' + t.charAt(0).toUpperCase() + t.slice(1);
+    document.getElementById(id)?.classList.toggle('active', t === tab);
+  });
+
+  if (tab === 'carte') {
+    panel.classList.remove('tab-active');
+    mapDiv.style.display = '';
+    setTimeout(() => map.invalidateSize(), 150);
+  } else {
+    panel.classList.add('tab-active');
+    mapDiv.style.display = 'none';
+
+    // Montrer uniquement les sections de cet onglet
+    document.querySelectorAll('.panel-section[data-tab]').forEach(el => {
+      el.style.display = el.dataset.tab === tab ? '' : 'none';
+    });
+  }
+}
+
+// Reset sur resize vers desktop
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 768) {
+    document.querySelector('.panel').classList.remove('tab-active');
+    document.getElementById('map').style.display = '';
+    document.querySelectorAll('.panel-section[data-tab]').forEach(el => {
+      el.style.display = '';
+    });
+  }
+  map.invalidateSize();
+});
 </script>
 </body>
 </html>
