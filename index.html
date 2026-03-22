@@ -377,7 +377,6 @@ body {
 
     /* ── PANORAMAX ── */
     .btn-panoramax {
-      width: 100%;
       padding: 10px;
       background: transparent;
       color: #4a9eda;
@@ -392,6 +391,8 @@ body {
       align-items: center;
       justify-content: center;
       gap: 8px;
+      margin-left: auto;
+      white-space: nowrap;
     }
 
     .btn-panoramax:hover { background: rgba(74,158,218,0.1); }
@@ -425,13 +426,21 @@ body {
     @media (max-width: 767px) {
 
       header {
-        padding: 8px 14px;
+        padding: 0 12px;
         height: 48px;
+        min-height: 48px;
         flex-shrink: 0;
+        gap: 8px;
       }
 
       .logo {
-        font-size: 1.1rem;
+        font-size: 1rem;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .logo-dot {
+        width: 8px; height: 8px;
       }
 
       .header-stats {
@@ -439,9 +448,12 @@ body {
       }
 
       .btn-panoramax {
-        font-size: 0.72rem;
-        padding: 6px 10px;
+        font-size: 0.68rem;
+        padding: 5px 8px;
         width: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
+        margin-left: auto;
       }
 
       /* Layout mobile : colonne unique */
@@ -584,7 +596,7 @@ body {
     Points en base : <span id="total-points">—</span> &nbsp;|&nbsp;
     Contributeurs : <span id="total-contribs">—</span>
   </div>
-  <button class="btn-panoramax" id="btnPanoramax" style="margin-left:auto;">
+  <button class="btn-panoramax" id="btnPanoramax">
     📷 Panoramax
   </button>
 </header>
