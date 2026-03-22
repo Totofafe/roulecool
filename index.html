@@ -474,9 +474,8 @@ body {
 
       .panel.tab-active { display: flex; }
 
-      /* Sections selon onglet */
-      [data-tab] { display: none; }
-      [data-tab].visible { display: block; }
+      /* Sections : visibles par défaut, gérées par JS sur mobile */
+      [data-tab] { display: block; }
 
       /* Éléments tactiles agrandis */
       .panel-section { padding: 14px 16px; }
@@ -1153,6 +1152,16 @@ function switchTab(tab) {
     });
   }
 }
+
+// Initialisation mobile au chargement
+window.addEventListener('load', () => {
+  if (window.innerWidth < 768) {
+    // Onglet Carte actif par défaut : masquer le panel
+    document.querySelector('.panel').classList.remove('tab-active');
+    document.getElementById('map').style.display = '';
+    document.getElementById('tabCarte').classList.add('active');
+  }
+});
 
 // Reset sur resize vers desktop
 window.addEventListener('resize', () => {
