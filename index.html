@@ -404,6 +404,166 @@ body {
       margin-top: 6px;
       display: block;
     }
+
+    /* ── RESPONSIVE : BARRE D'ONGLETS MOBILE ── */
+    .tab-bar {
+      display: none;
+    }
+
+    /* ── TABLETTE (768px - 1024px) ── */
+    @media (max-width: 1024px) and (min-width: 768px) {
+      .main {
+        grid-template-columns: 260px 1fr;
+        height: calc(100vh - 50px);
+      }
+      .header-stats {
+        font-size: 0.68rem;
+      }
+    }
+
+    /* ── MOBILE (< 768px) ── */
+    @media (max-width: 767px) {
+
+      header {
+        padding: 8px 14px;
+      }
+
+      .logo {
+        font-size: 1.1rem;
+      }
+
+      .header-stats {
+        display: none;
+      }
+
+      .btn-panoramax {
+        font-size: 0.72rem;
+        padding: 6px 10px;
+      }
+
+      /* Layout mobile : colonne unique */
+      .main {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 44px - 54px); /* header + tabbar */
+        overflow: hidden;
+      }
+
+      /* Panel = onglet scrollable, caché par défaut */
+      .panel {
+        display: none;
+        position: absolute;
+        top: 44px;
+        left: 0; right: 0;
+        bottom: 54px;
+        overflow-y: auto;
+        z-index: 200;
+        border-right: none;
+      }
+
+      .panel.tab-active {
+        display: flex;
+      }
+
+      /* Carte = plein écran, cachée si autre onglet actif */
+      #map {
+        position: absolute;
+        top: 44px;
+        left: 0; right: 0;
+        bottom: 54px;
+        display: block;
+      }
+
+      #map.tab-hidden {
+        display: none;
+      }
+
+      /* Sections dans le panel mobile : plus d'espace */
+      .panel-section {
+        padding: 14px 16px;
+      }
+
+      /* Drop zone plus grande sur mobile pour faciliter le tap */
+      .drop-zone {
+        padding: 18px 16px;
+      }
+
+      .drop-icon {
+        font-size: 1.8rem;
+      }
+
+      /* Champ pseudo plus grand */
+      .field input {
+        padding: 12px 14px;
+        font-size: 1rem;
+      }
+
+      /* Bouton contribuer plus grand */
+      .btn-send {
+        padding: 14px;
+        font-size: 1rem;
+      }
+
+      /* Légende plus lisible */
+      .legende-item {
+        font-size: 0.9rem;
+        padding: 4px 0;
+      }
+
+      .legende-dot {
+        width: 16px; height: 16px;
+      }
+
+      /* ── BARRE D'ONGLETS ── */
+      .tab-bar {
+        display: flex;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 54px;
+        background: var(--gris-carte);
+        border-top: 1px solid var(--gris-border);
+        z-index: 300;
+      }
+
+      .tab-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        background: none;
+        border: none;
+        color: var(--texte-dim);
+        font-family: 'DM Mono', monospace;
+        font-size: 0.6rem;
+        cursor: pointer;
+        transition: color 0.2s;
+        padding: 6px 0;
+        border-top: 2px solid transparent;
+      }
+
+      .tab-btn .tab-icon {
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+
+      .tab-btn.active {
+        color: var(--accent);
+        border-top-color: var(--accent);
+      }
+
+      /* Sections légende uniquement dans l'onglet Légende */
+      .panel-section-legende {
+        display: block;
+      }
+
+      /* Aide Sensor Logger compacte sur mobile */
+      .aide-sensor {
+        font-size: 0.78rem;
+        line-height: 1.5;
+      }
+    }
   </style>
 </head>
 <body>
@@ -425,10 +585,10 @@ body {
 <div class="main">
 
   <!-- ── PANEL GAUCHE ── -->
-  <div class="panel">
+  <div class="panel" id="panel">
 
-    <!-- Dépôt JSON -->
-    <div class="panel-section">
+    <!-- Dépôt JSON (onglet Dépôt) -->
+    <div class="panel-section" data-tab="depot">
       <h2>Déposer un trajet</h2>
 
       <div class="drop-zone" id="dropZone">
@@ -457,8 +617,8 @@ body {
       </div>
     </div>
 
-    <!-- Infos contributeur -->
-    <div class="panel-section">
+    <!-- Infos contributeur (onglet Dépôt) -->
+    <div class="panel-section" data-tab="depot">
       <h2>Votre identité</h2>
       <div class="field">
         <label>Pseudo</label>
@@ -466,8 +626,8 @@ body {
       </div>
     </div>
 
-    <!-- Envoyer -->
-    <div class="panel-section">
+    <!-- Envoyer (onglet Dépôt) -->
+    <div class="panel-section" data-tab="depot">
       <button class="btn-send" id="btnSend" disabled>
         <span>↑</span> Contribuer à la carte
       </button>
@@ -482,8 +642,8 @@ body {
       <div class="status" id="statusMsg"></div>
     </div>
 
-    <!-- Légende -->
-    <div class="panel-section">
+    <!-- Légende (onglet Légende) -->
+    <div class="panel-section" data-tab="legende">
       <h2>Légende</h2>
       <div class="legende">
         <div class="legende-item">
@@ -504,12 +664,51 @@ body {
       </div>
     </div>
 
+    <!-- Aide Sensor Logger (onglet Légende) -->
+    <div class="panel-section" data-tab="legende">
+      <h2>Configuration Sensor Logger</h2>
+      <div class="aide-sensor" style="font-size:0.75rem;color:var(--texte-dim);line-height:1.6;">
+        <div style="margin-bottom:8px;">
+          <span style="color:var(--accent);font-weight:600;">Capteurs à activer</span><br>
+          ✅ Location (GPS) · ✅ Accelerometer
+        </div>
+        <div style="margin-bottom:8px;">
+          <span style="color:var(--accent);font-weight:600;">Fréquence</span><br>
+          GPS + Accéléromètre : 1 mesure/seconde
+        </div>
+        <div style="margin-bottom:8px;">
+          <span style="color:var(--accent);font-weight:600;">Autorisations</span><br>
+          Android : localisation <em>Toujours</em><br>
+          iOS : localisation <em>Toujours</em> + arrière-plan
+        </div>
+        <div style="font-size:0.68rem;border-top:1px solid var(--gris-border);padding-top:8px;">
+          💡 Export au format JSON · Démarrer avant de partir
+        </div>
+      </div>
+    </div>
+
   </div><!-- fin .panel -->
 
   <!-- ── CARTE ── -->
   <div id="map"></div>
 
 </div>
+
+<!-- ── BARRE D'ONGLETS MOBILE ── -->
+<nav class="tab-bar" id="tabBar">
+  <button class="tab-btn" id="tabCarte" onclick="switchTab('carte')">
+    <span class="tab-icon">🗺️</span>
+    Carte
+  </button>
+  <button class="tab-btn" id="tabDepot" onclick="switchTab('depot')">
+    <span class="tab-icon">🚴</span>
+    Dépôt
+  </button>
+  <button class="tab-btn" id="tabLegende" onclick="switchTab('legende')">
+    <span class="tab-icon">📋</span>
+    Légende
+  </button>
+</nav>
 
 <!-- config.js chargé dynamiquement -->
 <script>
@@ -581,9 +780,7 @@ function processJSON(data, filename) {
 
   // Fusionner GPS + accéléromètre le plus proche
   const accelTimes = Object.keys(accelMap).map(Number).sort((a, b) => a - b);
-  
-  const dateDepart = new Date(gpsPoints[0].time / 1e6).toISOString().slice(0, 16).replace('T', ' ');
-  
+
   const points = gpsPoints.map(gps => {
     // Recherche binaire du timestamp accéléromètre le plus proche
     let lo = 0, hi = accelTimes.length - 1, best = 0;
@@ -605,8 +802,8 @@ function processJSON(data, filename) {
       couleur:     getColor(score),
       vitesse:     Math.round(gps.speed * 10) / 10,
       pseudo:      '',
-      date_trajet: dateDepart,
-	  nom_trajet:  filename.replace('.json', '').replace(/_/g, ' ').trim()
+      date_trajet: new Date(gps.time / 1e6).toISOString().slice(0, 16).replace('T', ' '),
+      nom_trajet:  filename.replace('.json', '').replace(/_/g, ' ').trim()
     };
   });
 
@@ -862,6 +1059,54 @@ window.addEventListener('load', () => {
   document.getElementById('legendConf').innerHTML = t.confortable;
   document.getElementById('legendAcce').innerHTML = t.acceptable;
   document.getElementById('legendInco').innerHTML = t.inconfortable;
+});
+
+// ── ONGLETS MOBILE ───────────────────────────────────────
+let ongletActif = 'carte';
+
+function switchTab(tab) {
+  ongletActif = tab;
+  const panel = document.getElementById('panel');
+  const mapDiv = document.getElementById('map');
+
+  // Mettre à jour les boutons
+  ['carte', 'depot', 'legende'].forEach(t => {
+    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+
+  if (tab === 'carte') {
+    panel.classList.remove('tab-active');
+    mapDiv.classList.remove('tab-hidden');
+    setTimeout(() => map.invalidateSize(), 100);
+  } else {
+    panel.classList.add('tab-active');
+    mapDiv.classList.add('tab-hidden');
+
+    // Afficher/masquer les sections selon l'onglet
+    document.querySelectorAll('.panel-section[data-tab]').forEach(el => {
+      el.style.display = el.dataset.tab === tab ? '' : 'none';
+    });
+  }
+}
+
+// Initialiser : onglet Carte actif par défaut
+window.addEventListener('load', () => {
+  if (window.innerWidth < 768) {
+    document.getElementById('tabCarte').classList.add('active');
+  }
+});
+
+// Sur desktop, toujours afficher toutes les sections
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 768) {
+    document.querySelectorAll('.panel-section[data-tab]').forEach(el => {
+      el.style.display = '';
+    });
+    document.getElementById('panel').classList.remove('tab-active');
+    document.getElementById('map').classList.remove('tab-hidden');
+  }
+  map.invalidateSize();
 });
 
 // ── PANORAMAX ────────────────────────────────────────────
