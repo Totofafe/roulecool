@@ -470,16 +470,26 @@ body {
         z-index: 50;
         border-right: none;
         flex-direction: column;
+        justify-content: space-between;
       }
 
       .panel.tab-active { display: flex; }
 
-      .panel-section { padding: 14px 16px; }
-      .drop-zone { padding: 16px; }
-      .drop-icon { font-size: 1.8rem; }
-      .field input { padding: 12px 14px; font-size: 1rem; }
-      .btn-send { padding: 14px; font-size: 1rem; }
-      .legende-item { font-size: 0.9rem; padding: 3px 0; }
+      .panel-section {
+        padding: 20px 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .panel-section h2 { margin-bottom: 14px; }
+      .drop-zone { padding: 20px 16px; }
+      .drop-icon { font-size: 2rem; }
+      .field { margin-bottom: 0; }
+      .field input { padding: 14px; font-size: 1rem; }
+      .btn-send { padding: 16px; font-size: 1rem; }
+      .legende-item { font-size: 0.9rem; padding: 6px 0; }
       .legende-dot { width: 16px; height: 16px; }
 
       .tab-bar {
