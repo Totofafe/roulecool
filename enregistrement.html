@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>RouleCool — Enregistrer un trajet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="seuils.js"></script>
+  <style>
+    :root {
+      --vert:    #2E7D32;
+      --vert-cl: #A5D6A7;
+      --rouge:   #F44336;
+      --fond:    #0f0f0f;
+      --panel:   #1a1a1a;
+      --border:  #2a2a2a;
+      --texte:   #f0f0f0;
+      --dim:     #666;
+      --accent:  #A5D6A7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--fond);
+      color: var(--texte);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      height: 48px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+    }
+
+    .header-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--texte);
+    }
+
+    /* ── CONTENU ── */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px 16px;
+      gap: 16px;
+    }
+
+    /* ── ÉTAT DU TRAJET ── */
+    .etat-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .etat-icon {
+      font-size: 3rem;
+      margin-bottom: 8px;
+      display: block;
+      transition: transform 0.3s;
+    }
+
+    .etat-icon.recording {
+      animation: bounce 1s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .etat-label {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.2rem;
+      margin-bottom: 4px;
+    }
+
+    .etat-label.recording { color: var(--rouge); }
+    .etat-label.idle      { color: var(--dim); }
+    .etat-label.done      { color: var(--vert); }
+
+    .etat-temps {
+      font-size: 2rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      color: var(--texte);
+      letter-spacing: 0.05em;
+      margin: 8px 0;
+    }
+
+    .etat-pts {
+      font-size: 0.75rem;
+      color: var(--dim);
+    }
+
+    .etat-pts span { color: var(--accent); }
+
+    /* ── STATS TEMPS RÉEL ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-card .label {
+      font-size: 0.62rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .value {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.4rem;
+      color: var(--texte);
+    }
+
+    .stat-card .unit {
+      font-size: 0.65rem;
+      color: var(--dim);
+    }
+
+    /* Score confort */
+    .score-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .score-dot {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .score-label {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .score-vib {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--dim);
+    }
+
+    /* ── CHAMP PSEUDO ── */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.68rem;
+      color: var(--dim);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .field input {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--texte);
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    .field input:focus { border-color: var(--vert); }
+    .field input::placeholder { color: var(--dim); }
+
+    /* ── BOUTONS ── */
+    .btn-start {
+      width: 100%;
+      padding: 18px;
+      background: var(--vert);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-start:hover { background: #388E3C; transform: translateY(-1px); }
+    .btn-start:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-stop {
+      width: 100%;
+      padding: 18px;
+      background: var(--rouge);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-stop.visible {
+      display: flex;
+    }
+
+    .btn-envoyer {
+      width: 100%;
+      padding: 14px;
+      background: var(--vert);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-envoyer.visible { display: flex; }
+
+    /* ── BARRE PROGRESSION ── */
+    .progress-wrap { display: none; margin-top: 10px; }
+    .progress-wrap.visible { display: block; }
+    .progress-bar-bg {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--vert);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .progress-label {
+      font-size: 0.7rem;
+      color: var(--dim);
+      margin-top: 4px;
+    }
+
+    /* ── STATUS ── */
+    .status {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      display: none;
+    }
+    .status.visible { display: block; }
+    .status.success { background: rgba(46,125,50,0.15); border: 1px solid rgba(46,125,50,0.4); color: #81c784; }
+    .status.error   { background: rgba(244,67,54,0.12); border: 1px solid rgba(244,67,54,0.3); color: #ff8a80; }
+    .status.loading { background: rgba(165,214,167,0.08); border: 1px solid rgba(165,214,167,0.2); color: var(--dim); }
+
+    /* ── AVERTISSEMENT iOS ── */
+    .ios-warning {
+      background: rgba(249,168,37,0.1);
+      border: 1px solid rgba(249,168,37,0.4);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.75rem;
+      color: #F9A825;
+      display: none;
+    }
+    .ios-warning.visible { display: block; }
+
+    .btn-ios-accel {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(249,168,37,0.2);
+      border: 1px solid #F9A825;
+      border-radius: 8px;
+      color: #F9A825;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="back-btn" href="index.html">← Carte</a>
+  <div class="header-title">🚴 Enregistrer</div>
+  <div style="width:60px"></div><!-- spacer -->
+</header>
+
+<div class="content">
+
+  <!-- État du trajet -->
+  <div class="etat-card">
+    <span class="etat-icon" id="etatIcon">🚴</span>
+    <div class="etat-label idle" id="etatLabel">Prêt à démarrer</div>
+    <div class="etat-temps" id="etatTemps">00:00</div>
+    <div class="etat-pts">Points enregistrés : <span id="nbPts">0</span></div>
+  </div>
+
+  <!-- Stats temps réel -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="label">Vitesse</div>
+      <div class="value" id="valVitesse">—</div>
+      <div class="unit">km/h</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Vibration</div>
+      <div class="value" id="valVibration">—</div>
+      <div class="unit">m/s²</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">GPS précision</div>
+      <div class="value" id="valPrecision">—</div>
+      <div class="unit">mètres</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Vib. moyenne</div>
+      <div class="value" id="valVibMoy">—</div>
+      <div class="unit">m/s²</div>
+    </div>
+  </div>
+
+  <!-- Score confort actuel -->
+  <div class="score-card">
+    <div class="score-dot" id="scoreDot" style="background:var(--dim)"></div>
+    <div class="score-label" id="scoreLabel">En attente…</div>
+    <div class="score-vib" id="scoreVib"></div>
+  </div>
+
+  <!-- Avertissement iOS -->
+  <div class="ios-warning" id="iosWarning">
+    ⚠️ Sur iOS, l'accès à l'accéléromètre nécessite votre autorisation.
+    <button class="btn-ios-accel" onclick="demanderAutorisationIOS()">
+      Autoriser l'accéléromètre
+    </button>
+  </div>
+
+  <!-- Pseudo -->
+  <div class="field">
+    <label>Pseudo contributeur</label>
+    <input type="text" id="inputPseudo" placeholder="ex. véloteur75" maxlength="40">
+  </div>
+
+  <!-- Boutons -->
+  <button class="btn-start" id="btnStart" onclick="demarrer()">
+    ▶ Démarrer le trajet
+  </button>
+
+  <button class="btn-stop visible" id="btnStop" onclick="arreter()" style="display:none;">
+    ⏹ Terminer le trajet
+  </button>
+
+  <button class="btn-envoyer" id="btnEnvoyer" onclick="envoyer()">
+    ↑ Contribuer à la carte
+  </button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">Envoi en cours…</div>
+  </div>
+
+  <div class="status" id="statusMsg"></div>
+
+</div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────
+window.GRIST_CONFIG = {
+  apiKey: null,
+  docId: "tX953apyJMeECD3dpa8n1f",
+  baseUrl: "https://roulecool-proxy.ajcosta.workers.dev/o/velo2fix/api",
+  table: "Points"
+};
+
+(function() {
+  const s = document.createElement('script');
+  s.src = 'config.js';
+  s.onerror = () => {};
+  document.head.appendChild(s);
+})();
+
+// ── ÉTAT ─────────────────────────────────────────────────
+let enregistrement = false;
+let points = [];
+let watchId = null;
+let dernierAccel = { x: 0, y: 0, z: 9.81 };
+let timerInterval = null;
+let secondes = 0;
+let wakeLock = null;
+let dateDepart = null;
+let nomTrajet = '';
+let vibSomme = 0;
+let vibCount = 0;
+
+// ── iOS : demande autorisation accéléromètre ─────────────
+function detecterIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+async function demanderAutorisationIOS() {
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {
+    const perm = await DeviceMotionEvent.requestPermission();
+    if (perm === 'granted') {
+      document.getElementById('iosWarning').classList.remove('visible');
+      demarrerAccelerometrie();
+    } else {
+      setStatus('error', '❌ Accès à l\'accéléromètre refusé.');
+    }
+  }
+}
+
+// ── ACCÉLÉROMÈTRE ────────────────────────────────────────
+function demarrerAccelerometrie() {
+  window.addEventListener('devicemotion', onDeviceMotion);
+}
+
+function onDeviceMotion(event) {
+  if (!enregistrement) return;
+  const a = event.accelerationIncludingGravity;
+  if (a && a.x !== null) {
+    dernierAccel = { x: a.x, y: a.y, z: a.z };
+  }
+}
+
+// ── GPS ──────────────────────────────────────────────────
+function demarrerGPS() {
+  if (!navigator.geolocation) {
+    setStatus('error', '❌ GPS non disponible sur cet appareil.');
+    return;
+  }
+
+  watchId = navigator.geolocation.watchPosition(
+    onPosition,
+    (err) => setStatus('error', `❌ GPS : ${err.message}`),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+  );
+}
+
+function onPosition(pos) {
+  if (!enregistrement) return;
+
+  const { latitude, longitude, speed, accuracy } = pos.coords;
+  if (accuracy > 50) return; // ignorer points imprécis
+
+  // Calcul vibration
+  const a = dernierAccel;
+  const magnitude = Math.sqrt(a.x**2 + a.y**2 + a.z**2);
+  const vibration = Math.abs(magnitude - 9.81);
+  const vitesse = (speed || 0) * 3.6;
+
+  const score = getScore(vibration);
+  const couleur = getColor(score);
+
+  // Accumuler pour vibration moyenne
+  vibSomme += vibration;
+  vibCount++;
+
+  const point = {
+    latitude,
+    longitude,
+    vibration: Math.round(vibration * 100) / 100,
+    score,
+    couleur,
+    vitesse: Math.round(vitesse * 10) / 10,
+    pseudo: document.getElementById('inputPseudo').value.trim() || 'anonyme',
+    date_trajet: dateDepart,
+    nom_trajet: nomTrajet,
+  };
+
+  points.push(point);
+
+  // Mise à jour UI
+  document.getElementById('valVitesse').textContent  = vitesse.toFixed(1);
+  document.getElementById('valVibration').textContent = vibration.toFixed(2);
+  document.getElementById('valPrecision').textContent = Math.round(accuracy);
+  document.getElementById('valVibMoy').textContent    = (vibSomme / vibCount).toFixed(2);
+  document.getElementById('nbPts').textContent        = points.length;
+  document.getElementById('scoreDot').style.background = couleur;
+  document.getElementById('scoreLabel').textContent   = score;
+  document.getElementById('scoreVib').textContent     = `${vibration.toFixed(2)} m/s²`;
+}
+
+// ── WAKE LOCK ────────────────────────────────────────────
+async function activerWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake lock activé');
+    } catch(e) {
+      console.warn('Wake lock non disponible :', e);
+    }
+  }
+}
+
+function libererWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+// ── TIMER ────────────────────────────────────────────────
+function demarrerTimer() {
+  secondes = 0;
+  timerInterval = setInterval(() => {
+    secondes++;
+    const m = String(Math.floor(secondes / 60)).padStart(2, '0');
+    const s = String(secondes % 60).padStart(2, '0');
+    document.getElementById('etatTemps').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+// ── DÉMARRER ─────────────────────────────────────────────
+async function demarrer() {
+  // Générer nom du trajet avec date/heure
+  const now = new Date();
+  dateDepart = now.toISOString().slice(0, 16).replace('T', ' ');
+  nomTrajet  = `Trajet ${now.toLocaleDateString('fr')} ${now.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'})}`;
+
+  points = [];
+  vibSomme = 0;
+  vibCount = 0;
+
+  // iOS : demander autorisation accéléromètre
+  if (detecterIOS() && typeof DeviceMotionEvent.requestPermission === 'function') {
+    document.getElementById('iosWarning').classList.add('visible');
+    return;
+  }
+
+  demarrerAccelerometrie();
+  demarrerGPS();
+  await activerWakeLock();
+  demarrerTimer();
+
+  enregistrement = true;
+
+  // UI
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display  = 'flex';
+  document.getElementById('btnEnvoyer').classList.remove('visible');
+  document.getElementById('etatIcon').classList.add('recording');
+  document.getElementById('etatLabel').className = 'etat-label recording';
+  document.getElementById('etatLabel').textContent = '● Enregistrement en cours';
+  setStatus('loading', '📡 GPS et accéléromètre actifs — écran maintenu allumé');
+}
+
+// ── ARRÊTER ───────────────────────────────────────────────
+function arreter() {
+  enregistrement = false;
+
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  window.removeEventListener('devicemotion', onDeviceMotion);
+  clearInterval(timerInterval);
+  libererWakeLock();
+
+  // UI
+  document.getElementById('btnStop').style.display  = 'none';
+  document.getElementById('btnStart').style.display = 'flex';
+  document.getElementById('etatIcon').classList.remove('recording');
+  document.getElementById('etatLabel').className = 'etat-label done';
+  document.getElementById('etatLabel').textContent = '✅ Trajet terminé';
+
+  if (points.length >= 2) {
+    document.getElementById('btnEnvoyer').classList.add('visible');
+    setStatus('success', `✅ ${points.length} points enregistrés — prêt à contribuer !`);
+  } else {
+    setStatus('error', '⚠️ Pas assez de points GPS. Vérifiez les autorisations.');
+  }
+}
+
+// ── ENVOYER VERS GRIST ────────────────────────────────────
+async function envoyer() {
+  const pseudo = document.getElementById('inputPseudo').value.trim() || 'anonyme';
+  const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || 'proxy';
+
+  const ptsAvecPseudo = points.map(p => ({ ...p, pseudo }));
+  const BATCH = 50;
+  const total = ptsAvecPseudo.length;
+  let sent = 0;
+
+  document.getElementById('btnEnvoyer').classList.remove('visible');
+  document.getElementById('progressWrap').classList.add('visible');
+  setStatus('loading', `Envoi de ${total} points…`);
+
+  const url = `${window.GRIST_CONFIG.baseUrl}/docs/${window.GRIST_CONFIG.docId}/tables/${window.GRIST_CONFIG.table}/records`;
+
+  try {
+    for (let i = 0; i < total; i += BATCH) {
+      const batch = ptsAvecPseudo.slice(i, i + BATCH);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ records: batch.map(p => ({ fields: p })) })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      sent += batch.length;
+      const pct = Math.round(100 * sent / total);
+      document.getElementById('progressFill').style.width  = pct + '%';
+      document.getElementById('progressLabel').textContent = `${sent} / ${total} points envoyés`;
+    }
+    setStatus('success', `🎉 ${total} points ajoutés à la carte collaborative !`);
+    points = [];
+  } catch(e) {
+    setStatus('error', '❌ Erreur : ' + e.message);
+    document.getElementById('btnEnvoyer').classList.add('visible');
+  }
+}
+
+// ── HELPERS ──────────────────────────────────────────────
+function setStatus(type, msg) {
+  const el = document.getElementById('statusMsg');
+  el.className = 'status' + (type ? ` ${type} visible` : '');
+  el.textContent = msg;
+}
+
+// Reprendre le wake lock si l'app revient au premier plan
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && enregistrement && !wakeLock) {
+    await activerWakeLock();
+  }
+});
+</script>
+</body>
+</html>
