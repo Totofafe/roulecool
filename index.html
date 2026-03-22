@@ -452,30 +452,37 @@ body {
         overflow: hidden;
       }
 
-      /* Panel = onglet scrollable, caché par défaut */
-      .panel {
-        display: none;
-        position: absolute;
-        inset: 0;
-        overflow-y: auto;
-        z-index: 100;
-        border-right: none;
-      }
-
       .panel.tab-active {
         display: flex;
+        flex-direction: column;
       }
 
       /* Carte = plein écran, z-index bas */
       #map {
-        position: absolute;
-        inset: 0;
+        position: fixed;
+        top: 48px;
+        left: 0; right: 0;
+        bottom: 54px;
+        height: auto;
         display: block;
         z-index: 10;
       }
 
       #map.tab-hidden {
         display: none;
+      }
+
+      /* Panel aussi en fixed pour cohérence */
+      .panel {
+        display: none;
+        position: fixed;
+        top: 48px;
+        left: 0; right: 0;
+        bottom: 54px;
+        overflow-y: auto;
+        z-index: 100;
+        border-right: none;
+        height: auto;
       }
 
       /* Sections dans le panel mobile : plus d'espace */
