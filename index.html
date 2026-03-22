@@ -410,6 +410,108 @@ body {
       margin-top: 6px;
       display: block;
     }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+    .tab-bar { display: none; }
+
+    /* ── TABLETTE 768-1024px ── */
+    @media (max-width: 1024px) and (min-width: 768px) {
+      .main { grid-template-columns: 260px 1fr; }
+      .header-stats { font-size: 0.68rem; }
+    }
+
+    /* ── MOBILE < 768px ── */
+    @media (max-width: 767px) {
+
+      header {
+        padding: 0 12px;
+        height: 44px;
+        min-height: 44px;
+        flex-shrink: 0;
+        z-index: 9000;
+      }
+
+      .logo { font-size: 1rem; gap: 6px; }
+      .logo-dot { width: 8px; height: 8px; }
+      .header-stats { display: none; }
+
+      .btn-panoramax {
+        width: auto !important;
+        padding: 5px 10px !important;
+        font-size: 0.7rem !important;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .main {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 44px - 54px);
+        overflow: hidden;
+        position: relative;
+      }
+
+      #map {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+
+      .panel {
+        display: none;
+        position: absolute;
+        inset: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        z-index: 50;
+        border-right: none;
+        flex-direction: column;
+      }
+
+      .panel.tab-active { display: flex; }
+
+      .panel-section { padding: 14px 16px; }
+      .drop-zone { padding: 16px; }
+      .drop-icon { font-size: 1.8rem; }
+      .field input { padding: 12px 14px; font-size: 1rem; }
+      .btn-send { padding: 14px; font-size: 1rem; }
+      .legende-item { font-size: 0.9rem; padding: 3px 0; }
+      .legende-dot { width: 16px; height: 16px; }
+
+      .tab-bar {
+        display: flex;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 54px;
+        background: var(--gris-carte);
+        border-top: 1px solid var(--gris-border);
+        z-index: 9999;
+      }
+
+      .tab-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        background: none;
+        border: none;
+        border-top: 2px solid transparent;
+        color: var(--texte-dim);
+        font-family: 'DM Mono', monospace;
+        font-size: 0.6rem;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .tab-btn .tab-icon { font-size: 1.2rem; line-height: 1; }
+      .tab-btn.active { color: var(--accent); border-top-color: var(--accent); }
+    }
   </style>
 </head>
 <body>
@@ -434,7 +536,7 @@ body {
   <div class="panel">
 
     <!-- Enregistrement temps réel -->
-    <div class="panel-section">
+    <div class="panel-section" data-tab="depot">
       <h2>Enregistrement temps réel</h2>
       <a href="enregistrement.html" style="
         display:flex; align-items:center; justify-content:center; gap:8px;
@@ -452,7 +554,7 @@ body {
     </div>
 
     <!-- Dépôt JSON -->
-    <div class="panel-section">
+    <div class="panel-section" data-tab="depot">
       <h2>Déposer un trajet</h2>
 
       <div class="drop-zone" id="dropZone">
@@ -482,7 +584,7 @@ body {
     </div>
 
     <!-- Infos contributeur -->
-    <div class="panel-section">
+    <div class="panel-section" data-tab="depot">
       <h2>Votre identité</h2>
       <div class="field">
         <label>Pseudo</label>
@@ -491,7 +593,7 @@ body {
     </div>
 
     <!-- Envoyer -->
-    <div class="panel-section">
+    <div class="panel-section" data-tab="depot">
       <button class="btn-send" id="btnSend" disabled>
         <span>↑</span> Contribuer à la carte
       </button>
@@ -507,7 +609,7 @@ body {
     </div>
 
     <!-- Légende -->
-    <div class="panel-section">
+    <div class="panel-section" data-tab="legende">
       <h2>Légende</h2>
       <div class="legende">
         <div class="legende-item">
@@ -528,12 +630,48 @@ body {
       </div>
     </div>
 
+    <!-- Aide Sensor Logger -->
+    <div class="panel-section" data-tab="legende">
+      <h2>Configuration Sensor Logger</h2>
+      <div style="font-size:0.75rem;color:var(--texte-dim);line-height:1.6;">
+        <div style="margin-bottom:8px;">
+          <span style="color:var(--accent);font-weight:600;">Capteurs à activer</span><br>
+          ✅ Location (GPS) · ✅ Accelerometer
+        </div>
+        <div style="margin-bottom:8px;">
+          <span style="color:var(--accent);font-weight:600;">Fréquence</span><br>
+          GPS + Accéléromètre : 1 mesure/seconde
+        </div>
+        <div style="margin-bottom:8px;">
+          <span style="color:var(--accent);font-weight:600;">Autorisations</span><br>
+          Android : <em>Toujours autoriser</em><br>
+          iOS : <em>Toujours</em> + arrière-plan activé
+        </div>
+        <div style="font-size:0.68rem;border-top:1px solid var(--gris-border);padding-top:8px;">
+          💡 Export JSON · Démarrer avant de partir
+        </div>
+      </div>
+    </div>
+
   </div><!-- fin .panel -->
 
   <!-- ── CARTE ── -->
   <div id="map"></div>
 
 </div>
+
+<!-- ── BARRE D'ONGLETS MOBILE ── -->
+<nav class="tab-bar">
+  <button class="tab-btn active" id="tabCarte" onclick="switchTab('carte')">
+    <span class="tab-icon">🗺️</span>Carte
+  </button>
+  <button class="tab-btn" id="tabDepot" onclick="switchTab('depot')">
+    <span class="tab-icon">🚴</span>Dépôt
+  </button>
+  <button class="tab-btn" id="tabLegende" onclick="switchTab('legende')">
+    <span class="tab-icon">📋</span>Légende
+  </button>
+</nav>
 
 <!-- config.js chargé dynamiquement -->
 <script>
@@ -999,6 +1137,42 @@ document.getElementById('btnPanoramax').addEventListener('click', () => {
 
 // Recharger si la vue change (et si actif)
 map.on('moveend', () => { if (panoramaxActif) chargerPanoramax(); });
+
+// ── ONGLETS MOBILE ───────────────────────────────────────
+function switchTab(tab) {
+  if (window.innerWidth >= 768) return;
+
+  const panel = document.querySelector('.panel');
+  const mapDiv = document.getElementById('map');
+
+  ['carte','depot','legende'].forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1))
+      ?.classList.toggle('active', t === tab);
+  });
+
+  if (tab === 'carte') {
+    panel.classList.remove('tab-active');
+    mapDiv.style.display = '';
+    setTimeout(() => map.invalidateSize(), 150);
+  } else {
+    panel.classList.add('tab-active');
+    mapDiv.style.display = 'none';
+    document.querySelectorAll('.panel-section[data-tab]').forEach(el => {
+      el.style.display = el.dataset.tab === tab ? '' : 'none';
+    });
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 768) {
+    document.querySelector('.panel').classList.remove('tab-active');
+    document.getElementById('map').style.display = '';
+    document.querySelectorAll('.panel-section[data-tab]').forEach(el => {
+      el.style.display = '';
+    });
+  }
+  map.invalidateSize();
+});
 
 // ── SERVICE WORKER (PWA) ──────────────────────────────────
 if ('serviceWorker' in navigator) {
