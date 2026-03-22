@@ -46,7 +46,7 @@ body {
       background: var(--gris-carte);
       position: sticky;
       top: 0;
-      z-index: 1000;
+      z-index: 9998;
     }
 
     .logo {
@@ -426,6 +426,8 @@ body {
 
       header {
         padding: 8px 14px;
+        height: 48px;
+        flex-shrink: 0;
       }
 
       .logo {
@@ -439,13 +441,14 @@ body {
       .btn-panoramax {
         font-size: 0.72rem;
         padding: 6px 10px;
+        width: auto;
       }
 
       /* Layout mobile : colonne unique */
       .main {
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - 44px - 54px); /* header + tabbar */
+        display: block;
+        position: relative;
+        height: calc(100vh - 48px - 54px);
         overflow: hidden;
       }
 
@@ -453,11 +456,9 @@ body {
       .panel {
         display: none;
         position: absolute;
-        top: 44px;
-        left: 0; right: 0;
-        bottom: 54px;
+        inset: 0;
         overflow-y: auto;
-        z-index: 200;
+        z-index: 100;
         border-right: none;
       }
 
@@ -465,13 +466,12 @@ body {
         display: flex;
       }
 
-      /* Carte = plein écran, cachée si autre onglet actif */
+      /* Carte = plein écran, z-index bas */
       #map {
         position: absolute;
-        top: 44px;
-        left: 0; right: 0;
-        bottom: 54px;
+        inset: 0;
         display: block;
+        z-index: 10;
       }
 
       #map.tab-hidden {
@@ -522,7 +522,7 @@ body {
         height: 54px;
         background: var(--gris-carte);
         border-top: 1px solid var(--gris-border);
-        z-index: 300;
+        z-index: 9999;
       }
 
       .tab-btn {
