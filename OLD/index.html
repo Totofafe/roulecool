@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RouleCool — Carte collaborative du confort cyclable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="seuils.js"></script>
+  <style>
+    :root {
+      --vert-fonce:   #2E7D32;
+      --vert-clair:   #A5D6A7;
+      --rouge:        #F44336;
+      --gris-fond:    #0f0f0f;
+      --gris-carte:   #1a1a1a;
+      --gris-panel:   #222222;
+      --gris-border:  #333333;
+      --texte:        #f0f0f0;
+      --texte-dim:    #888888;
+      --accent:       #A5D6A7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Mono', monospace;
+  background: var(--gris-fond);
+  color: var(--texte);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--gris-border);
+      background: var(--gris-carte);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--vert-fonce);
+      box-shadow: 0 0 12px var(--vert-fonce);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.8); }
+    }
+
+    .header-stats {
+      font-size: 0.75rem;
+      color: var(--texte-dim);
+      text-align: center;
+    }
+
+    .header-stats span {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* ── LAYOUT ── */
+.main {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  width: 100%;
+  height: calc(100vh - 50px);
+  overflow: hidden;
+}
+
+    /* ── PANEL GAUCHE ── */
+    .panel {
+      background: var(--gris-panel);
+      border-right: 1px solid var(--gris-border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .panel-section {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--gris-border);
+    }
+
+    .panel-section h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--texte-dim);
+      margin-bottom: 8px;
+    }
+
+    /* ── DROP ZONE ── */
+    .drop-zone {
+      border: 2px dashed var(--gris-border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--vert-fonce);
+      background: rgba(46, 125, 50, 0.05);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .drop-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.82rem;
+      margin-bottom: 2px;
+      text-align: left;
+    }
+
+    .drop-sub {
+      font-size: 0.68rem;
+      color: var(--texte-dim);
+      text-align: left;
+    }
+
+    /* ── FORM ── */
+    .field {
+      margin-bottom: 8px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--texte-dim);
+      margin-bottom: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--gris-carte);
+      border: 1px solid var(--gris-border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      color: var(--texte);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus {
+      border-color: var(--vert-fonce);
+    }
+
+    .field input::placeholder {
+      color: var(--texte-dim);
+    }
+
+    /* clé API fallback */
+    .api-fallback {
+      display: none;
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(244, 67, 54, 0.08);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+      border-radius: 6px;
+      font-size: 0.72rem;
+      color: #ff8a80;
+    }
+
+    .api-fallback.visible { display: block; }
+
+    /* ── PREVIEW TRAJET ── */
+    .preview-box {
+      display: none;
+      background: var(--gris-carte);
+      border: 1px solid var(--gris-border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .preview-box.visible { display: block; }
+
+    .preview-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preview-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-item {
+      font-size: 0.7rem;
+      color: var(--texte-dim);
+    }
+
+    .stat-item strong {
+      display: block;
+      font-size: 1rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      color: var(--texte);
+    }
+
+    .confort-bar {
+      margin-top: 14px;
+      display: flex;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      gap: 2px;
+    }
+
+    .confort-bar div {
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── BOUTON ENVOYER ── */
+    .btn-send {
+      width: 100%;
+      padding: 10px;
+      background: var(--vert-fonce);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-send:hover:not(:disabled) {
+      background: #388E3C;
+      transform: translateY(-1px);
+    }
+
+    .btn-send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ── STATUS ── */
+    .status {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      display: none;
+    }
+
+    .status.visible { display: block; }
+    .status.success { background: rgba(46,125,50,0.15); border: 1px solid rgba(46,125,50,0.4); color: #81c784; }
+    .status.error   { background: rgba(244,67,54,0.12); border: 1px solid rgba(244,67,54,0.3); color: #ff8a80; }
+    .status.loading { background: rgba(165,214,167,0.08); border: 1px solid rgba(165,214,167,0.2); color: var(--texte-dim); }
+
+    /* ── LÉGENDE ── */
+    .legende {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .legende-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.78rem;
+    }
+
+    .legende-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legende-seuil {
+      color: var(--texte-dim);
+      font-size: 0.68rem;
+      margin-left: auto;
+    }
+
+    /* ── CARTE ── */
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+    .leaflet-container {
+      background: #1a1a1a;
+    }
+
+    /* ── PROGRESS ── */
+    .progress-wrap {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .progress-wrap.visible { display: block; }
+
+    .progress-bar-bg {
+      height: 4px;
+      background: var(--gris-border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--vert-fonce);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-label {
+      font-size: 0.68rem;
+      color: var(--texte-dim);
+      margin-top: 5px;
+    }
+
+    /* ── PANORAMAX ── */
+    .btn-panoramax {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      color: #4a9eda;
+      border: 1px solid #4a9eda;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-panoramax:hover { background: rgba(74,158,218,0.1); }
+    .btn-panoramax.active { background: #4a9eda; color: white; }
+
+    .panoramax-popup img {
+      width: 100%;
+      max-width: 260px;
+      border-radius: 4px;
+      margin-top: 6px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    RouleCool
+  </div>
+  <div class="header-stats">
+    Points en base : <span id="total-points">—</span> &nbsp;|&nbsp;
+    Contributeurs : <span id="total-contribs">—</span>
+  </div>
+  <button class="btn-panoramax" id="btnPanoramax" style="margin-left:auto;">
+    📷 Panoramax
+  </button>
+</header>
+
+<div class="main">
+
+  <!-- ── PANEL GAUCHE ── -->
+  <div class="panel">
+
+    <!-- Dépôt JSON -->
+    <div class="panel-section">
+      <h2>Déposer un trajet</h2>
+
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".json">
+        <span class="drop-icon">🚴</span>
+        <div>
+          <div class="drop-title">Glissez votre fichier JSON</div>
+          <div class="drop-sub">Export Sensor Logger · Android / iOS</div>
+        </div>
+      </div>
+
+      <!-- Preview après chargement -->
+      <div class="preview-box" id="previewBox" style="margin-top:14px;">
+        <div class="preview-title" id="previewTitle">—</div>
+        <div class="preview-stats">
+          <div class="stat-item"><strong id="statPoints">—</strong>points GPS</div>
+          <div class="stat-item"><strong id="statDist">—</strong>distance</div>
+          <div class="stat-item"><strong id="statVib">—</strong>vib. moy.</div>
+          <div class="stat-item"><strong id="statScore">—</strong>majoritaire</div>
+        </div>
+        <div class="confort-bar" id="confortBar">
+          <div style="background:var(--vert-fonce);width:0%"></div>
+          <div style="background:var(--vert-clair);width:0%"></div>
+          <div style="background:var(--rouge);width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Infos contributeur -->
+    <div class="panel-section">
+      <h2>Votre identité</h2>
+      <div class="field">
+        <label>Pseudo</label>
+        <input type="text" id="inputPseudo" placeholder="ex. véloteur75" maxlength="40">
+      </div>
+    </div>
+
+    <!-- Envoyer -->
+    <div class="panel-section">
+      <button class="btn-send" id="btnSend" disabled>
+        <span>↑</span> Contribuer à la carte
+      </button>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-label" id="progressLabel">Envoi en cours…</div>
+      </div>
+
+      <div class="status" id="statusMsg"></div>
+    </div>
+
+    <!-- Légende -->
+    <div class="panel-section">
+      <h2>Légende</h2>
+      <div class="legende">
+        <div class="legende-item">
+          <div class="legende-dot" style="background:var(--vert-fonce)"></div>
+          Confortable
+          <span class="legende-seuil" id="legendConf"></span>
+        </div>
+        <div class="legende-item">
+          <div class="legende-dot" style="background:var(--vert-clair)"></div>
+          Acceptable
+          <span class="legende-seuil" id="legendAcce"></span>
+        </div>
+        <div class="legende-item">
+          <div class="legende-dot" style="background:var(--rouge)"></div>
+          Inconfortable
+          <span class="legende-seuil" id="legendInco"></span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- fin .panel -->
+
+  <!-- ── CARTE ── -->
+  <div id="map"></div>
+
+</div>
+
+<!-- config.js chargé dynamiquement -->
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+// Valeurs par défaut (écrasées par config.js si présent)
+window.GRIST_CONFIG = {
+  apiKey: null,
+  docId: "tX953apyJMeECD3dpa8n1f",
+  baseUrl: "https://roulecool-proxy.ajcosta.workers.dev/o/velo2fix/api",
+  table: "Points"
+};
+
+// Tentative de chargement de config.js
+(function() {
+  const s = document.createElement('script');
+  s.src = 'config.js';
+s.onerror = () => {};
+  s.onload = () => {
+    if (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) {
+      // config.js a écrasé GRIST_CONFIG
+    }
+  };
+  document.head.appendChild(s);
+})();
+
+// ── CARTE LEAFLET ────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([48.8566, 2.3522], 12);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19
+}).addTo(map);
+
+let previewLayer = null;
+let processedPoints = [];
+
+// ── SCORING — défini dans seuils.js ─────────────────────
+
+// ── TRAITEMENT JSON ──────────────────────────────────────
+function processJSON(data, filename) {
+  const accelMap = {};
+  const gpsPoints = [];
+
+  for (const entry of data) {
+    if (entry.sensor === 'Accelerometer') {
+      accelMap[parseFloat(entry.time)] = {
+        x: parseFloat(entry.x),
+        y: parseFloat(entry.y),
+        z: parseFloat(entry.z)
+      };
+    } else if (entry.sensor === 'Location') {
+      const lat = parseFloat(entry.latitude);
+      const lon = parseFloat(entry.longitude);
+      const acc = parseFloat(entry.horizontalAccuracy || 999);
+      if (lat && lon && acc < 50) {
+        gpsPoints.push({
+          time: parseFloat(entry.time),
+          latitude: lat,
+          longitude: lon,
+          speed: parseFloat(entry.speed || 0) * 3.6,
+          accuracy: acc
+        });
+      }
+    }
+  }
+
+  if (gpsPoints.length === 0) return [];
+
+  // Fusionner GPS + accéléromètre le plus proche
+  const accelTimes = Object.keys(accelMap).map(Number).sort((a, b) => a - b);
+  
+  const dateDepart = new Date(gpsPoints[0].time / 1e6).toISOString().slice(0, 16).replace('T', ' ');
+  
+  const points = gpsPoints.map(gps => {
+    // Recherche binaire du timestamp accéléromètre le plus proche
+    let lo = 0, hi = accelTimes.length - 1, best = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (Math.abs(accelTimes[mid] - gps.time) < Math.abs(accelTimes[best] - gps.time)) best = mid;
+      if (accelTimes[mid] < gps.time) lo = mid + 1; else hi = mid - 1;
+    }
+    const a = accelMap[accelTimes[best]] || { x: 0, y: 0, z: 9.81 };
+    const magnitude = Math.sqrt(a.x**2 + a.y**2 + a.z**2);
+    const vibration = Math.abs(magnitude - 9.81);
+    const score = getScore(vibration);
+
+    return {
+      latitude:    gps.latitude,
+      longitude:   gps.longitude,
+      vibration:   Math.round(vibration * 100) / 100,
+      score:       score,
+      couleur:     getColor(score),
+      vitesse:     Math.round(gps.speed * 10) / 10,
+      pseudo:      '',
+      date_trajet: dateDepart,
+	  nom_trajet:  filename.replace('.json', '').replace(/_/g, ' ').trim()
+    };
+  });
+
+  return points;
+}
+
+// ── DISTANCE ────────────────────────────────────────────
+function calcDistance(points) {
+  let d = 0;
+  for (let i = 1; i < points.length; i++) {
+    const R = 6371000;
+    const φ1 = points[i-1].latitude * Math.PI/180;
+    const φ2 = points[i].latitude   * Math.PI/180;
+    const Δφ = (points[i].latitude  - points[i-1].latitude) * Math.PI/180;
+    const Δλ = (points[i].longitude - points[i-1].longitude) * Math.PI/180;
+    const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+    d += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+  return d;
+}
+
+// ── AFFICHAGE PREVIEW SUR CARTE ──────────────────────────
+function showPreview(points) {
+  if (previewLayer) map.removeLayer(previewLayer);
+  previewLayer = L.layerGroup().addTo(map);
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i], p2 = points[i+1];
+    L.polyline([[p1.latitude, p1.longitude],[p2.latitude, p2.longitude]], {
+      color: p1.couleur, weight: 7, opacity: 0.85
+    }).bindPopup(`<b>${p1.score}</b><br>${p1.vibration.toFixed(2)} m/s² · ${p1.vitesse.toFixed(1)} km/h`)
+      .addTo(previewLayer);
+  }
+
+  const bounds = points.map(p => [p.latitude, p.longitude]);
+  setTimeout(() => {
+  map.invalidateSize();
+  map.fitBounds(bounds, { padding: [40, 40] });
+}, 100);
+  map.invalidateSize();
+}
+
+// ── CHARGEMENT FICHIER ───────────────────────────────────
+function handleFile(file) {
+  if (!file || !file.name.endsWith('.json')) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      processedPoints = processJSON(data, file.name);
+
+      if (processedPoints.length < 2) {
+        setStatus('error', '⚠️ Pas assez de points GPS valides dans ce fichier.');
+        return;
+      }
+
+      // Stats
+      const dist = calcDistance(processedPoints);
+      const vibMoy = processedPoints.reduce((s, p) => s + p.vibration, 0) / processedPoints.length;
+      const nConf = processedPoints.filter(p => p.score === 'Confortable').length;
+      const nAcce = processedPoints.filter(p => p.score === 'Acceptable').length;
+      const nInco = processedPoints.filter(p => p.score === 'Inconfortable').length;
+      const total = processedPoints.length;
+      const majoritaire = nConf >= nAcce && nConf >= nInco ? 'Confortable'
+                        : nAcce >= nInco ? 'Acceptable' : 'Inconfortable';
+
+      document.getElementById('previewTitle').textContent = processedPoints[0].nom_trajet;
+      document.getElementById('statPoints').textContent  = total;
+      document.getElementById('statDist').textContent    = dist > 1000 ? (dist/1000).toFixed(1)+' km' : Math.round(dist)+' m';
+      document.getElementById('statVib').textContent     = vibMoy.toFixed(1)+' m/s²';
+      document.getElementById('statScore').textContent   = majoritaire;
+      document.getElementById('previewBox').classList.add('visible');
+
+      const bar = document.getElementById('confortBar').children;
+      bar[0].style.width = (100*nConf/total)+'%';
+      bar[1].style.width = (100*nAcce/total)+'%';
+      bar[2].style.width = (100*nInco/total)+'%';
+
+      showPreview(processedPoints);
+      document.getElementById('btnSend').disabled = false;
+      setStatus('', '');
+
+    } catch(err) {
+      setStatus('error', '❌ Fichier JSON invalide : ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── ENVOI VERS GRIST ─────────────────────────────────────
+async function sendToGrist() {
+  const pseudo = document.getElementById('inputPseudo').value.trim() || 'anonyme';
+const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || "proxy";
+
+  const points = processedPoints.map(p => ({ ...p, pseudo }));
+  const BATCH = 50;
+  const total = points.length;
+  let sent = 0;
+
+  document.getElementById('btnSend').disabled = true;
+  document.getElementById('progressWrap').classList.add('visible');
+  setStatus('loading', `Envoi de ${total} points…`);
+
+  const url = `${window.GRIST_CONFIG.baseUrl}/docs/${window.GRIST_CONFIG.docId}/tables/${window.GRIST_CONFIG.table}/records`;
+
+  try {
+    for (let i = 0; i < total; i += BATCH) {
+      const batch = points.slice(i, i + BATCH);
+      const body = { records: batch.map(p => ({ fields: p })) };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`HTTP ${res.status} : ${err}`);
+      }
+
+      sent += batch.length;
+      const pct = Math.round(100 * sent / total);
+      document.getElementById('progressFill').style.width  = pct + '%';
+      document.getElementById('progressLabel').textContent = `${sent} / ${total} points envoyés`;
+    }
+
+    setStatus('success', `✅ ${total} points ajoutés à la carte collaborative !`);
+    loadGlobalStats();
+
+  } catch(err) {
+    setStatus('error', '❌ Erreur : ' + err.message);
+    document.getElementById('btnSend').disabled = false;
+  }
+}
+
+// ── STATS GLOBALES ───────────────────────────────────────
+async function loadGlobalStats() {
+  const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || "proxy";
+  if (!apiKey) return;
+
+  try {
+    const url = `${window.GRIST_CONFIG.baseUrl}/docs/${window.GRIST_CONFIG.docId}/tables/${window.GRIST_CONFIG.table}/records?limit=10000`;
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+    if (!res.ok) return;
+    const data = await res.json();
+    const records = data.records || [];
+    document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
+    const pseudos = new Set(records.map(r => r.fields.pseudo).filter(Boolean));
+    document.getElementById('total-contribs').textContent = pseudos.size;
+  } catch(_) {}
+}
+
+// ── HELPERS ──────────────────────────────────────────────
+function setStatus(type, msg) {
+  const el = document.getElementById('statusMsg');
+  el.className = 'status' + (type ? ' ' + type + ' visible' : '');
+  el.textContent = msg;
+}
+
+// ── CHARGEMENT DONNÉES COLLABORATIVES ────────────────────
+async function loadMapData() {
+  const url = `${window.GRIST_CONFIG.baseUrl}/docs/${window.GRIST_CONFIG.docId}/tables/${window.GRIST_CONFIG.table}/records?limit=50000`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    const records = data.records || [];
+
+    if (records.length === 0) return;
+
+    // Regrouper par nom_trajet
+    const trajets = {};
+    for (const r of records) {
+      const f = r.fields;
+      const key = `${f.pseudo || 'anonyme'}__${f.nom_trajet || 'trajet'}__${f.date_trajet || ''}`;
+      if (!trajets[key]) trajets[key] = [];
+      trajets[key].push(f);
+    }
+
+    // Couche dédiée aux données collaboratives
+    const collaboLayer = L.layerGroup().addTo(map);
+
+    for (const [key, points] of Object.entries(trajets)) {
+      const [pseudo, nom, date] = key.split('__');
+
+      // Trier par ordre d'enregistrement (index dans le tableau)
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+
+        if (!p1.latitude || !p2.latitude) continue;
+
+        L.polyline(
+          [[p1.latitude, p1.longitude], [p2.latitude, p2.longitude]],
+          { color: p1.couleur || '#999', weight: 5, opacity: 0.7 }
+        ).bindPopup(`
+          <div style="font-family:Arial;font-size:12px;">
+            <b>${p1.score || ''}</b><br>
+            Vibration : ${(p1.vibration || 0).toFixed(2)} m/s²<br>
+            Vitesse : ${(p1.vitesse || 0).toFixed(1)} km/h<br>
+            <hr style="margin:5px 0">
+            <i style="color:#666;font-size:11px;">
+              ${pseudo} · ${nom}<br>${date}
+            </i>
+          </div>
+        `).addTo(collaboLayer);
+      }
+    }
+
+    // Stats header
+    const pseudos = new Set(records.map(r => r.fields.pseudo).filter(Boolean));
+    document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
+    document.getElementById('total-contribs').textContent = pseudos.size;
+
+  } catch(e) {
+    console.warn('Erreur chargement carte collaborative :', e);
+  }
+}
+
+// ── EVENTS ───────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  handleFile(e.target.files[0]);
+});
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('btnSend').addEventListener('click', sendToGrist);
+
+// Chargement initial des stats (après que config.js soit chargé)
+setTimeout(() => {
+  map.invalidateSize();
+  setTimeout(loadMapData, 500);
+}, 500);
+
+window.addEventListener('resize', () => map.invalidateSize());
+
+// ── INIT LÉGENDE depuis seuils.js ────────────────────────
+window.addEventListener('load', () => {
+  const t = getLegendText();
+  document.getElementById('legendConf').innerHTML = t.confortable;
+  document.getElementById('legendAcce').innerHTML = t.acceptable;
+  document.getElementById('legendInco').innerHTML = t.inconfortable;
+});
+
+// ── PANORAMAX ────────────────────────────────────────────
+const PANORAMAX_API = 'https://api.panoramax.xyz/api/search';
+let panoramaxLayer  = null;
+let panoramaxActif  = false;
+
+// Couleur du marqueur selon ancienneté de la photo
+function couleurMarqueur(dateStr) {
+  if (!dateStr) return { bg: '#888888', label: 'Date inconnue' };
+  const mois = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24 * 30);
+  if (mois < 6)  return { bg: '#1565C0', label: 'Récente (< 6 mois)' };   // bleu foncé
+  if (mois < 18) return { bg: '#F9A825', label: 'Moyenne (6-18 mois)' };  // jaune
+  return           { bg: '#424242', label: 'Ancienne (> 18 mois)' };      // gris foncé
+}
+
+function makeCameraIcon(bg) {
+  return L.divIcon({
+    html: `<div style="background:${bg};border:2px solid white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,0.35);">📷</div>`,
+    className: '',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+}
+
+// Dédoublonnage : grille ~50m, 1 photo par cellule (la plus récente)
+function dedoublonner(features) {
+  const grille = {};
+  features.forEach(f => {
+    const [lon, lat] = f.geometry.coordinates;
+    const cle = `${Math.round(lat * 1000)}_${Math.round(lon * 1000)}`; // ~100m
+    const date = f.properties?.datetime || '';
+    if (!grille[cle] || date > grille[cle].properties.datetime) {
+      grille[cle] = f;
+    }
+  });
+  return Object.values(grille);
+}
+
+async function chargerPanoramax() {
+  if (panoramaxLayer) { map.removeLayer(panoramaxLayer); panoramaxLayer = null; }
+  if (!panoramaxActif) return;
+
+  // Utiliser les bounds visibles de la carte
+  const bounds = map.getBounds();
+  const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+
+  try {
+    const res = await fetch(`${PANORAMAX_API}?bbox=${bbox}&limit=200`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const brutes = data.features || [];
+
+    if (brutes.length === 0) {
+      setStatus('loading', '📷 Aucune photo Panoramax dans cette zone.');
+      setTimeout(() => setStatus('', ''), 3000);
+      return;
+    }
+
+    // Dédoublonner + garder la plus récente par zone
+    const features = dedoublonner(brutes);
+    panoramaxLayer = L.layerGroup().addTo(map);
+
+    features.forEach(f => {
+      const [lon, lat] = f.geometry.coordinates;
+      const uuid    = f.id;
+      const date    = f.properties?.datetime?.slice(0, 10) || '—';
+      const { bg, label } = couleurMarqueur(f.properties?.datetime);
+      const imgUrl  = `https://api.panoramax.xyz/api/pictures/${uuid}/sd.jpg`;
+      const viewUrl = `https://api.panoramax.xyz/#focus=pic&pic=${uuid}`;
+
+      L.marker([lat, lon], { icon: makeCameraIcon(bg) })
+        .bindPopup(`
+          <div style="font-family:Arial;font-size:12px;min-width:200px;">
+            <b>📷 Photo Panoramax</b><br>
+            <span style="color:#666;font-size:11px;">📅 ${date} — ${label}</span><br>
+            <img src="${imgUrl}" alt="Photo Panoramax"
+                 onerror="this.style.display='none'"
+                 style="width:100%;max-width:260px;border-radius:4px;margin-top:6px;">
+            <div style="margin-top:6px;">
+              <a href="${viewUrl}" target="_blank" style="color:#4a9eda;font-size:11px;">
+                Voir sur Panoramax ↗
+              </a>
+            </div>
+          </div>
+        `, { maxWidth: 280 })
+        .addTo(panoramaxLayer);
+    });
+
+    setStatus('success', `📷 ${features.length} photos Panoramax (${brutes.length} brutes).`);
+    setTimeout(() => setStatus('', ''), 4000);
+
+  } catch(e) {
+    setStatus('error', '❌ Erreur Panoramax : ' + e.message);
+  }
+}
+
+document.getElementById('btnPanoramax').addEventListener('click', () => {
+  panoramaxActif = !panoramaxActif;
+  const btn = document.getElementById('btnPanoramax');
+  if (panoramaxActif) {
+    btn.classList.add('active');
+    btn.textContent = '📷 Masquer';
+    chargerPanoramax();
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '📷 Panoramax';
+    if (panoramaxLayer) { map.removeLayer(panoramaxLayer); panoramaxLayer = null; }
+  }
+});
+
+// Recharger si la vue change (et si actif)
+map.on('moveend', () => { if (panoramaxActif) chargerPanoramax(); });
+</script>
+</body>
+</html>
