@@ -672,8 +672,9 @@ body {
       <div style="font-size:0.75rem;color:var(--texte-dim);line-height:1.8;">
         <div style="margin-bottom:10px;">
           <span style="color:var(--texte);font-weight:600;">Alberto Costa</span><br>
-          <a href="mailto:aljcosta&#64;gmail.com" style="color:var(--accent);text-decoration:none;">
-            aljcosta&#64;gmail.com
+          <a href="mailto:aljcosta@gmail.com"
+             style="color:var(--accent);text-decoration:none;">
+            aljcosta@gmail.com
           </a>
         </div>
         <div style="font-size:0.68rem;border-top:1px solid var(--gris-border);padding-top:10px;line-height:1.6;">
@@ -736,27 +737,6 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   subdomains: 'abcd',
   maxZoom: 19
 }).addTo(map);
-
-// Bouton visée
-let positionMarker = null;
-const btnPos = L.control({ position: 'topleft' });
-btnPos.onAdd = function() {
-  const b = L.DomUtil.create('button', '');
-  b.title = 'Ma position';
-  b.textContent = '\u25CE';
-  b.style.cssText = 'width:34px;height:34px;font-size:18px;line-height:34px;text-align:center;background:white;border:2px solid #ccc;border-radius:4px;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,0.3);';
-  L.DomEvent.on(b, 'click', function() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(function(pos) {
-      map.setView([pos.coords.latitude, pos.coords.longitude], 15);
-      if (positionMarker) map.removeLayer(positionMarker);
-      positionMarker = L.circleMarker([pos.coords.latitude, pos.coords.longitude], {radius:8,color:'#1565C0',fillColor:'#4a9eda',fillOpacity:0.9,weight:2}).bindPopup('Vous\u00eatres ici').addTo(map);
-    }, null, {enableHighAccuracy:true,timeout:8000});
-  });
-  L.DomEvent.disableClickPropagation(b);
-  return b;
-};
-btnPos.addTo(map);
 
 let previewLayer = null;
 let processedPoints = [];
@@ -1041,12 +1021,6 @@ async function loadMapData() {
     document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
     document.getElementById('total-contribs').textContent = pseudos.size;
 
-    // fitBounds si pas de position manuelle
-    if (!positionMarker) {
-      const coords = records.filter(function(r) { return r.fields.latitude && r.fields.longitude; }).map(function(r) { return [r.fields.latitude, r.fields.longitude]; });
-      if (coords.length > 0) map.fitBounds(coords, {padding:[40,40]});
-    }
-
   } catch(e) {
     console.warn('Erreur chargement carte collaborative :', e);
   }
@@ -1235,4 +1209,11 @@ window.addEventListener('resize', () => {
 // ── SERVICE WORKER (PWA) ──────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    na
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(() => console.log('[PWA] Service Worker enregistré'))
+      .catch(e => console.warn('[PWA] SW non enregistré :', e));
+  });
+}
+</script>
+</body>
+</html>
