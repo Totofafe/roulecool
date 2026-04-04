@@ -672,9 +672,8 @@ body {
       <div style="font-size:0.75rem;color:var(--texte-dim);line-height:1.8;">
         <div style="margin-bottom:10px;">
           <span style="color:var(--texte);font-weight:600;">Alberto Costa</span><br>
-          <a href="mailto:aljcosta@gmail.com"
-             style="color:var(--accent);text-decoration:none;">
-            aljcosta@gmail.com
+          <a href="/cdn-cgi/l/email-protection#6d0c01070e021e190c2d0a000c0401430e0200" style="color:var(--accent);text-decoration:none;">
+            <span class="__cf_email__" data-cfemail="583934323b372b2c39183f35393134763b3735">[email&#160;protected]</span>
           </a>
         </div>
         <div style="font-size:0.68rem;border-top:1px solid var(--gris-border);padding-top:10px;line-height:1.6;">
@@ -706,7 +705,7 @@ body {
 </nav>
 
 <!-- config.js chargé dynamiquement -->
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── CONFIG ──────────────────────────────────────────────
 // Valeurs par défaut (écrasées par config.js si présent)
 window.GRIST_CONFIG = {
@@ -737,6 +736,45 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   subdomains: 'abcd',
   maxZoom: 19
 }).addTo(map);
+
+// ── BOUTON "MA POSITION" (icône visée) ───────────────────
+let positionMarker = null;
+
+const btnPosition = L.control({ position: 'topleft' });
+btnPosition.onAdd = () => {
+  const btn = L.DomUtil.create('button', '');
+  btn.title = 'Ma position';
+  btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="7"/>
+    <line x1="12" y1="1" x2="12" y2="5"/>
+    <line x1="12" y1="19" x2="12" y2="23"/>
+    <line x1="1" y1="12" x2="5" y2="12"/>
+    <line x1="19" y1="12" x2="23" y2="12"/>
+  </svg>`;
+  btn.style.cssText = `
+    width:34px; height:34px; background:white; border:2px solid #ccc;
+    border-radius:4px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center;
+    box-shadow:0 1px 5px rgba(0,0,0,0.3);
+  `;
+  btn.onclick = () => centrerSurPosition();
+  L.DomEvent.disableClickPropagation(btn);
+  return btn;
+};
+btnPosition.addTo(map);
+
+function centrerSurPosition() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude } = pos.coords;
+    map.setView([latitude, longitude], 15);
+    if (positionMarker) map.removeLayer(positionMarker);
+    positionMarker = L.circleMarker([latitude, longitude], {
+      radius: 8, color: '#1565C0', fillColor: '#4a9eda',
+      fillOpacity: 0.9, weight: 2
+    }).bindPopup('Vous êtes ici').addTo(map);
+  }, null, { enableHighAccuracy: true, timeout: 8000 });
+}
 
 let previewLayer = null;
 let processedPoints = [];
@@ -1021,6 +1059,14 @@ async function loadMapData() {
     document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
     document.getElementById('total-contribs').textContent = pseudos.size;
 
+    // fitBounds sur toutes les données si pas encore positionné
+    if (!positionMarker) {
+      const coords = records
+        .filter(r => r.fields.latitude && r.fields.longitude)
+        .map(r => [r.fields.latitude, r.fields.longitude]);
+      if (coords.length > 0) map.fitBounds(coords, { padding: [40, 40] });
+    }
+
   } catch(e) {
     console.warn('Erreur chargement carte collaborative :', e);
   }
@@ -1042,9 +1088,22 @@ dz.addEventListener('drop', e => {
 
 document.getElementById('btnSend').addEventListener('click', sendToGrist);
 
-// Chargement initial des stats (après que config.js soit chargé)
+// Chargement initial : géolocalisation puis données Grist
 setTimeout(() => {
   map.invalidateSize();
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        map.setView([pos.coords.latitude, pos.coords.longitude], 14);
+        positionMarker = L.circleMarker(
+          [pos.coords.latitude, pos.coords.longitude],
+          { radius: 8, color: '#1565C0', fillColor: '#4a9eda', fillOpacity: 0.9, weight: 2 }
+        ).bindPopup('Vous êtes ici').addTo(map);
+      },
+      () => {}, // si refus → fitBounds sur les données prendra le relais
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  }
   setTimeout(loadMapData, 500);
 }, 500);
 
@@ -1209,11 +1268,4 @@ window.addEventListener('resize', () => {
 // ── SERVICE WORKER (PWA) ──────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js')
-      .then(() => console.log('[PWA] Service Worker enregistré'))
-      .catch(e => console.warn('[PWA] SW non enregistré :', e));
-  });
-}
-</script>
-</body>
-</html>
+    na
