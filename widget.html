@@ -319,30 +319,59 @@ function renderMap(records) {
 
   for (const [key, pts] of Object.entries(trajets)) {
     const [pseudo, nom, date] = key.split('__');
+    const ptsFiltres = pts.filter(p => p.latitude && p.longitude);
+    if (ptsFiltres.length === 0) continue;
 
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p1 = pts[i], p2 = pts[i+1];
-      if (!p1.latitude || !p2.latitude) continue;
+    allBounds.push([ptsFiltres[0].latitude, ptsFiltres[0].longitude]);
 
-      allBounds.push([p1.latitude, p1.longitude]);
+    let segmentCoords = [];
+    let couleurCourante = null;
 
-      L.polyline(
-        [[p1.latitude, p1.longitude], [p2.latitude, p2.longitude]],
-        { color: p1.couleur || '#999', weight: 6, opacity: 0.8 }
-      ).bindPopup(`
-        <div style="font-family:Arial;font-size:12px;min-width:180px;">
-          <b style="font-size:13px;">${p1.score || '—'}</b><br>
-          <hr style="margin:5px 0;border-color:#ddd;">
-          Vibration : <b>${(p1.vibration||0).toFixed(2)} m/s²</b><br>
-          Vitesse : ${(p1.vitesse||0).toFixed(1)} km/h<br>
-          <hr style="margin:5px 0;border-color:#ddd;">
-          <i style="color:#666;font-size:11px;">
-            👤 ${pseudo}<br>
-            📍 ${nom}<br>
-            📅 ${date}
-          </i>
-        </div>
-      `).addTo(mapLayer);
+    for (let i = 0; i < ptsFiltres.length; i++) {
+      const p = ptsFiltres[i];
+      const couleur = p.couleur || '#999';
+
+      if (couleurCourante === null) {
+        couleurCourante = couleur;
+        segmentCoords = [[p.latitude, p.longitude]];
+      } else if (couleur !== couleurCourante) {
+        segmentCoords.push([p.latitude, p.longitude]);
+        L.polyline(segmentCoords, { color: couleurCourante, weight: 6, opacity: 0.8 })
+          .bindPopup(`
+            <div style="font-family:Arial;font-size:12px;min-width:180px;">
+              <b style="font-size:13px;">${ptsFiltres[i-1].score || '—'}</b><br>
+              <hr style="margin:5px 0;border-color:#ddd;">
+              Vibration : <b>${(ptsFiltres[i-1].vibration||0).toFixed(2)} m/s²</b><br>
+              Vitesse : ${(ptsFiltres[i-1].vitesse||0).toFixed(1)} km/h<br>
+              <hr style="margin:5px 0;border-color:#ddd;">
+              <i style="color:#666;font-size:11px;">
+                👤 ${pseudo}<br>📍 ${nom}<br>📅 ${date}
+              </i>
+            </div>
+          `).addTo(mapLayer);
+        couleurCourante = couleur;
+        segmentCoords = [[p.latitude, p.longitude]];
+      } else {
+        segmentCoords.push([p.latitude, p.longitude]);
+      }
+    }
+
+    // Dernier segment
+    if (segmentCoords.length > 1) {
+      const last = ptsFiltres[ptsFiltres.length - 1];
+      L.polyline(segmentCoords, { color: couleurCourante, weight: 6, opacity: 0.8 })
+        .bindPopup(`
+          <div style="font-family:Arial;font-size:12px;min-width:180px;">
+            <b style="font-size:13px;">${last.score || '—'}</b><br>
+            <hr style="margin:5px 0;border-color:#ddd;">
+            Vibration : <b>${(last.vibration||0).toFixed(2)} m/s²</b><br>
+            Vitesse : ${(last.vitesse||0).toFixed(1)} km/h<br>
+            <hr style="margin:5px 0;border-color:#ddd;">
+            <i style="color:#666;font-size:11px;">
+              👤 ${pseudo}<br>📍 ${nom}<br>📅 ${date}
+            </i>
+          </div>
+        `).addTo(mapLayer);
     }
   }
 
