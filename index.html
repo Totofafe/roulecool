@@ -1056,9 +1056,14 @@ async function loadMapData() {
 
 if (!positionMarker) {
       var coords = [];
+      var trajetsVus = {};
       for (var i = 0; i < records.length; i++) {
         var f = records[i].fields;
-        if (f.latitude && f.longitude) { coords.push([f.latitude, f.longitude]); }
+        var key = f.nom_trajet || '';
+        if (f.latitude && f.longitude && !trajetsVus[key]) {
+          coords.push([f.latitude, f.longitude]);
+          trajetsVus[key] = true;
+        }
       }
       if (coords.length > 0) { map.fitBounds(coords, { padding: [40, 40] }); }
     }
