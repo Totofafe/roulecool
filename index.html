@@ -765,6 +765,19 @@ function centrerSurPosition() {
   }, null, { enableHighAccuracy: true, timeout: 8000 });
 }
 
+function centrerSurPosition() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude } = pos.coords;
+    map.setView([latitude, longitude], 15);
+    if (positionMarker) map.removeLayer(positionMarker);
+    positionMarker = L.circleMarker([latitude, longitude], {
+      radius: 8, color: '#1565C0', fillColor: '#4a9eda',
+      fillOpacity: 0.9, weight: 2
+    }).bindPopup('Vous êtes ici').addTo(map);
+  }, null, { enableHighAccuracy: true, timeout: 8000 });
+}
+
 let previewLayer = null;
 let processedPoints = [];
 
@@ -1077,24 +1090,10 @@ dz.addEventListener('drop', e => {
 
 document.getElementById('btnSend').addEventListener('click', sendToGrist);
 
-// Chargement initial : données Grist d'abord, géolocalisation ensuite
+// Chargement initial
 setTimeout(() => {
   map.invalidateSize();
   setTimeout(loadMapData, 500);
-  // Géolocalisation en parallèle, sans bloquer
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        map.setView([pos.coords.latitude, pos.coords.longitude], 14);
-        positionMarker = L.circleMarker(
-          [pos.coords.latitude, pos.coords.longitude],
-          { radius: 8, color: '#1565C0', fillColor: '#4a9eda', fillOpacity: 0.9, weight: 2 }
-        ).bindPopup('Vous êtes ici').addTo(map);
-      },
-      () => {}, // si refus → fitBounds sur les données prendra le relais
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
-    );
-  }
 }, 500);
 
 window.addEventListener('resize', () => map.invalidateSize());
