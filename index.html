@@ -1108,9 +1108,23 @@ dz.addEventListener('drop', e => {
 document.getElementById('btnSend').addEventListener('click', sendToGrist);
 
 // Chargement initial des stats (après que config.js soit chargé)
-setTimeout(() => {
+setTimeout(function() {
   map.invalidateSize();
   setTimeout(loadMapData, 500);
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        map.setView([pos.coords.latitude, pos.coords.longitude], 14);
+        if (positionMarker) { map.removeLayer(positionMarker); }
+        positionMarker = L.circleMarker(
+          [pos.coords.latitude, pos.coords.longitude],
+          { radius: 8, color: '#1565C0', fillColor: '#4a9eda', fillOpacity: 0.9, weight: 2 }
+        ).bindPopup('Vous êtes ici').addTo(map);
+      },
+      function() {},
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  }
 }, 500);
 
 window.addEventListener('resize', () => map.invalidateSize());
