@@ -1022,9 +1022,8 @@ async function loadMapData() {
     // Couche dédiée aux données collaboratives
     const collaboLayer = L.layerGroup().addTo(map);
 
-    for (const [key, points] of Object.entries(trajets)) {
+for (const [key, points] of Object.entries(trajets)) {
       const [pseudo, nom, date] = key.split('__');
-      // Regrouper les segments consécutifs de même couleur
       let segmentCoords = [];
       let couleurCourante = null;
       for (let i = 0; i < points.length; i++) {
@@ -1036,10 +1035,16 @@ async function loadMapData() {
             L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
               .bindPopup(`<div style="font-family:Arial;font-size:12px;">
                 <b>${points[i-1].score || ''}</b><br>
+                Vibration : ${(points[i-1].vibration || 0).toFixed(2)} m/s²<br>
+                Vitesse : ${(points[i-1].vitesse || 0).toFixed(1)} km/h<br>
+                <hr style="margin:5px 0">
                 <i style="color:#666;font-size:11px;">${pseudo} · ${nom}<br>${date}</i>
               </div>`).addTo(collaboLayer);
           }
-          segmentCoords = [[p.latitude, p.longitude]];
+          // Inclure le dernier point du segment précédent pour assurer la continuité
+          segmentCoords = segmentCoords.length > 0
+            ? [segmentCoords[segmentCoords.length - 1], [p.latitude, p.longitude]]
+            : [[p.latitude, p.longitude]];
           couleurCourante = couleur;
         } else {
           segmentCoords.push([p.latitude, p.longitude]);
@@ -1047,8 +1052,13 @@ async function loadMapData() {
       }
       // Dernier segment
       if (segmentCoords.length > 1) {
+        const last = points.filter(p => p.latitude).slice(-1)[0];
         L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
           .bindPopup(`<div style="font-family:Arial;font-size:12px;">
+            <b>${last.score || ''}</b><br>
+            Vibration : ${(last.vibration || 0).toFixed(2)} m/s²<br>
+            Vitesse : ${(last.vitesse || 0).toFixed(1)} km/h<br>
+            <hr style="margin:5px 0">
             <i style="color:#666;font-size:11px;">${pseudo} · ${nom}<br>${date}</i>
           </div>`).addTo(collaboLayer);
       }
