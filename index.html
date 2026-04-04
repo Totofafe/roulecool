@@ -1024,35 +1024,39 @@ async function loadMapData() {
 
 for (const [key, points] of Object.entries(trajets)) {
       const [pseudo, nom, date] = key.split('__');
+      const ptsFiltres = points.filter(p => p.latitude && p.longitude);
       let segmentCoords = [];
       let couleurCourante = null;
-      for (let i = 0; i < points.length; i++) {
-        const p = points[i];
-        if (!p.latitude) continue;
+
+      for (let i = 0; i < ptsFiltres.length; i++) {
+        const p = ptsFiltres[i];
         const couleur = p.couleur || '#999';
-        if (couleur !== couleurCourante) {
-          if (segmentCoords.length > 1) {
-            L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
-              .bindPopup(`<div style="font-family:Arial;font-size:12px;">
-                <b>${points[i-1].score || ''}</b><br>
-                Vibration : ${(points[i-1].vibration || 0).toFixed(2)} m/s²<br>
-                Vitesse : ${(points[i-1].vitesse || 0).toFixed(1)} km/h<br>
-                <hr style="margin:5px 0">
-                <i style="color:#666;font-size:11px;">${pseudo} · ${nom}<br>${date}</i>
-              </div>`).addTo(collaboLayer);
-          }
-          // Inclure le dernier point du segment précédent pour assurer la continuité
-          segmentCoords = segmentCoords.length > 0
-            ? [segmentCoords[segmentCoords.length - 1], [p.latitude, p.longitude]]
-            : [[p.latitude, p.longitude]];
+
+        if (couleurCourante === null) {
           couleurCourante = couleur;
+          segmentCoords = [[p.latitude, p.longitude]];
+        } else if (couleur !== couleurCourante) {
+          // Ajouter le point de jonction au segment courant avant de tracer
+          segmentCoords.push([p.latitude, p.longitude]);
+          L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
+            .bindPopup(`<div style="font-family:Arial;font-size:12px;">
+              <b>${ptsFiltres[i-1].score || ''}</b><br>
+              Vibration : ${(ptsFiltres[i-1].vibration || 0).toFixed(2)} m/s²<br>
+              Vitesse : ${(ptsFiltres[i-1].vitesse || 0).toFixed(1)} km/h<br>
+              <hr style="margin:5px 0">
+              <i style="color:#666;font-size:11px;">${pseudo} · ${nom}<br>${date}</i>
+            </div>`).addTo(collaboLayer);
+          // Nouveau segment qui repart de ce même point de jonction
+          couleurCourante = couleur;
+          segmentCoords = [[p.latitude, p.longitude]];
         } else {
           segmentCoords.push([p.latitude, p.longitude]);
         }
       }
+
       // Dernier segment
       if (segmentCoords.length > 1) {
-        const last = points.filter(p => p.latitude).slice(-1)[0];
+        const last = ptsFiltres[ptsFiltres.length - 1];
         L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
           .bindPopup(`<div style="font-family:Arial;font-size:12px;">
             <b>${last.score || ''}</b><br>
@@ -1063,7 +1067,6 @@ for (const [key, points] of Object.entries(trajets)) {
           </div>`).addTo(collaboLayer);
       }
     }
-
     // Stats header
     const pseudos = new Set(records.map(r => r.fields.pseudo).filter(Boolean));
     document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
