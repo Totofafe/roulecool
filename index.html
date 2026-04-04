@@ -1024,28 +1024,33 @@ async function loadMapData() {
 
     for (const [key, points] of Object.entries(trajets)) {
       const [pseudo, nom, date] = key.split('__');
-
-      // Trier par ordre d'enregistrement (index dans le tableau)
-      for (let i = 0; i < points.length - 1; i++) {
-        const p1 = points[i];
-        const p2 = points[i + 1];
-
-        if (!p1.latitude || !p2.latitude) continue;
-
-        L.polyline(
-          [[p1.latitude, p1.longitude], [p2.latitude, p2.longitude]],
-          { color: p1.couleur || '#999', weight: 5, opacity: 0.7 }
-        ).bindPopup(`
-          <div style="font-family:Arial;font-size:12px;">
-            <b>${p1.score || ''}</b><br>
-            Vibration : ${(p1.vibration || 0).toFixed(2)} m/s²<br>
-            Vitesse : ${(p1.vitesse || 0).toFixed(1)} km/h<br>
-            <hr style="margin:5px 0">
-            <i style="color:#666;font-size:11px;">
-              ${pseudo} · ${nom}<br>${date}
-            </i>
-          </div>
-        `).addTo(collaboLayer);
+      // Regrouper les segments consécutifs de même couleur
+      let segmentCoords = [];
+      let couleurCourante = null;
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+        if (!p.latitude) continue;
+        const couleur = p.couleur || '#999';
+        if (couleur !== couleurCourante) {
+          if (segmentCoords.length > 1) {
+            L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
+              .bindPopup(`<div style="font-family:Arial;font-size:12px;">
+                <b>${points[i-1].score || ''}</b><br>
+                <i style="color:#666;font-size:11px;">${pseudo} · ${nom}<br>${date}</i>
+              </div>`).addTo(collaboLayer);
+          }
+          segmentCoords = [[p.latitude, p.longitude]];
+          couleurCourante = couleur;
+        } else {
+          segmentCoords.push([p.latitude, p.longitude]);
+        }
+      }
+      // Dernier segment
+      if (segmentCoords.length > 1) {
+        L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
+          .bindPopup(`<div style="font-family:Arial;font-size:12px;">
+            <i style="color:#666;font-size:11px;">${pseudo} · ${nom}<br>${date}</i>
+          </div>`).addTo(collaboLayer);
       }
     }
 
