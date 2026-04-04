@@ -1088,9 +1088,11 @@ dz.addEventListener('drop', e => {
 
 document.getElementById('btnSend').addEventListener('click', sendToGrist);
 
-// Chargement initial : géolocalisation puis données Grist
+// Chargement initial : données Grist d'abord, géolocalisation ensuite
 setTimeout(() => {
   map.invalidateSize();
+  setTimeout(loadMapData, 500);
+  // Géolocalisation en parallèle, sans bloquer
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       pos => {
@@ -1101,10 +1103,9 @@ setTimeout(() => {
         ).bindPopup('Vous êtes ici').addTo(map);
       },
       () => {}, // si refus → fitBounds sur les données prendra le relais
-      { enableHighAccuracy: true, timeout: 5000 }
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
     );
   }
-  setTimeout(loadMapData, 500);
 }, 500);
 
 window.addEventListener('resize', () => map.invalidateSize());
