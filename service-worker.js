@@ -2,7 +2,7 @@
 // ⚠️ INCRÉMENTER LA VERSION À CHAQUE GIT PUSH (v1 → v2 → v3...)
 // Cela force le rechargement du cache sur les appareils des utilisateurs.
 
-const CACHE_NAME = 'roulecool-v11';
+const CACHE_NAME = 'roulecool-v12';
 
 // Fichiers à mettre en cache au premier chargement
 const CACHE_FILES = [
