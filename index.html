@@ -738,6 +738,39 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 19
 }).addTo(map);
 
+// Bouton visée
+var positionMarker = null;
+var btnPos = L.control({ position: 'topleft' });
+btnPos.onAdd = function() {
+  var b = L.DomUtil.create('button', '');
+  b.title = 'Ma position';
+  b.textContent = '\u25CE';
+  b.style.width = '34px';
+  b.style.height = '34px';
+  b.style.fontSize = '18px';
+  b.style.lineHeight = '34px';
+  b.style.textAlign = 'center';
+  b.style.background = 'white';
+  b.style.border = '2px solid #ccc';
+  b.style.borderRadius = '4px';
+  b.style.cursor = 'pointer';
+  b.style.boxShadow = '0 1px 5px rgba(0,0,0,0.3)';
+  L.DomEvent.on(b, 'click', function() {
+    if (!navigator.geolocation) { return; }
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+      if (positionMarker) { map.removeLayer(positionMarker); }
+      positionMarker = L.circleMarker(
+        [pos.coords.latitude, pos.coords.longitude],
+        { radius: 8, color: '#1565C0', fillColor: '#4a9eda', fillOpacity: 0.9, weight: 2 }
+      ).bindPopup('Vous etes ici').addTo(map);
+    }, null, { enableHighAccuracy: true, timeout: 8000 });
+  });
+  L.DomEvent.disableClickPropagation(b);
+  return b;
+};
+btnPos.addTo(map);
+
 let previewLayer = null;
 let processedPoints = [];
 
@@ -1020,6 +1053,15 @@ async function loadMapData() {
     const pseudos = new Set(records.map(r => r.fields.pseudo).filter(Boolean));
     document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
     document.getElementById('total-contribs').textContent = pseudos.size;
+
+if (!positionMarker) {
+      var coords = [];
+      for (var i = 0; i < records.length; i++) {
+        var f = records[i].fields;
+        if (f.latitude && f.longitude) { coords.push([f.latitude, f.longitude]); }
+      }
+      if (coords.length > 0) { map.fitBounds(coords, { padding: [40, 40] }); }
+    }
 
   } catch(e) {
     console.warn('Erreur chargement carte collaborative :', e);
