@@ -672,8 +672,8 @@ body {
       <div style="font-size:0.75rem;color:var(--texte-dim);line-height:1.8;">
         <div style="margin-bottom:10px;">
           <span style="color:var(--texte);font-weight:600;">Alberto Costa</span><br>
-          <a href="mailto:aljcosta&#64;gmail.com" style="color:var(--accent);text-decoration:none;">
-            aljcosta&#64;gmail.com
+          <a href="/cdn-cgi/l/email-protection#40212c2a232f33342100272d21292c6e232f2d" style="color:var(--accent);text-decoration:none;">
+            <span class="__cf_email__" data-cfemail="8aebe6e0e9e5f9feebcaede7ebe3e6a4e9e5e7">[email&#160;protected]</span>
           </a>
         </div>
         <div style="font-size:0.68rem;border-top:1px solid var(--gris-border);padding-top:10px;line-height:1.6;">
@@ -705,7 +705,7 @@ body {
 </nav>
 
 <!-- config.js chargé dynamiquement -->
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── CONFIG ──────────────────────────────────────────────
 // Valeurs par défaut (écrasées par config.js si présent)
 window.GRIST_CONFIG = {
@@ -737,46 +737,26 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 19
 }).addTo(map);
 
-// ── BOUTON "MA POSITION" (icône visée) ───────────────────
+// Bouton visée + marqueur de position
 let positionMarker = null;
-
-const btnPosition = L.control({ position: 'topleft' });
-btnPosition.onAdd = () => {
-  const btn = L.DomUtil.create('button', '');
-  btn.title = 'Ma position';
-  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/></svg>';
-  btn.style.cssText = 'width:34px;height:34px;background:white;border:2px solid #ccc;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.3);';
-  btn.onclick = () => centrerSurPosition();
-  L.DomEvent.disableClickPropagation(btn);
-  return btn;
+const btnPos = L.control({ position: 'topleft' });
+btnPos.onAdd = () => {
+  const b = L.DomUtil.create('button', '');
+  b.title = 'Ma position';
+  b.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/></svg>';
+  b.style.cssText = 'width:34px;height:34px;background:white;border:2px solid #ccc;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.3);';
+  b.onclick = function() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+      if (positionMarker) map.removeLayer(positionMarker);
+      positionMarker = L.circleMarker([pos.coords.latitude, pos.coords.longitude], {radius:8, color:'#1565C0', fillColor:'#4a9eda', fillOpacity:0.9, weight:2}).bindPopup('Vous êtes ici').addTo(map);
+    }, null, {enableHighAccuracy:true, timeout:8000});
+  };
+  L.DomEvent.disableClickPropagation(b);
+  return b;
 };
-btnPosition.addTo(map);
-
-function centrerSurPosition() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(pos => {
-    const { latitude, longitude } = pos.coords;
-    map.setView([latitude, longitude], 15);
-    if (positionMarker) map.removeLayer(positionMarker);
-    positionMarker = L.circleMarker([latitude, longitude], {
-      radius: 8, color: '#1565C0', fillColor: '#4a9eda',
-      fillOpacity: 0.9, weight: 2
-    }).bindPopup('Vous êtes ici').addTo(map);
-  }, null, { enableHighAccuracy: true, timeout: 8000 });
-}
-
-function centrerSurPosition() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(pos => {
-    const { latitude, longitude } = pos.coords;
-    map.setView([latitude, longitude], 15);
-    if (positionMarker) map.removeLayer(positionMarker);
-    positionMarker = L.circleMarker([latitude, longitude], {
-      radius: 8, color: '#1565C0', fillColor: '#4a9eda',
-      fillOpacity: 0.9, weight: 2
-    }).bindPopup('Vous êtes ici').addTo(map);
-  }, null, { enableHighAccuracy: true, timeout: 8000 });
-}
+btnPos.addTo(map);
 
 let previewLayer = null;
 let processedPoints = [];
@@ -1061,12 +1041,10 @@ async function loadMapData() {
     document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
     document.getElementById('total-contribs').textContent = pseudos.size;
 
-    // fitBounds sur toutes les données si pas encore positionné
+    // fitBounds si pas de position manuelle
     if (!positionMarker) {
-      const coords = records
-        .filter(r => r.fields.latitude && r.fields.longitude)
-        .map(r => [r.fields.latitude, r.fields.longitude]);
-      if (coords.length > 0) map.fitBounds(coords, { padding: [40, 40] });
+      const coords = records.filter(r => r.fields.latitude && r.fields.longitude).map(r => [r.fields.latitude, r.fields.longitude]);
+      if (coords.length > 0) map.fitBounds(coords, {padding:[40,40]});
     }
 
   } catch(e) {
@@ -1090,7 +1068,7 @@ dz.addEventListener('drop', e => {
 
 document.getElementById('btnSend').addEventListener('click', sendToGrist);
 
-// Chargement initial
+// Chargement initial des stats (après que config.js soit chargé)
 setTimeout(() => {
   map.invalidateSize();
   setTimeout(loadMapData, 500);
