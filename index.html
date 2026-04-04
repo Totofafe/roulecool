@@ -525,6 +525,47 @@ body {
       .tab-btn .tab-icon { font-size: 1.2rem; line-height: 1; }
       .tab-btn.active { color: var(--accent); border-top-color: var(--accent); }
     }
+	
+/* ── BANDEAU INSTALLATION PWA ── */
+#pwa-banner {
+  display: none;
+  position: fixed;
+  bottom: 54px;
+  left: 0; right: 0;
+  background: #1a1a1a;
+  border-top: 1px solid #2E7D32;
+  padding: 10px 16px;
+  z-index: 8000;
+  align-items: center;
+  gap: 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  color: #f0f0f0;
+}
+#pwa-banner.visible { display: flex; }
+#pwa-banner .pwa-text { flex: 1; }
+#pwa-banner .pwa-install {
+  background: #2E7D32;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#pwa-banner .pwa-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}	
+	
   </style>
 </head>
 <body>
@@ -1293,6 +1334,48 @@ if ('serviceWorker' in navigator) {
       .catch(e => console.warn('[PWA] SW non enregistré :', e));
   });
 }
+
+// ── INSTALLATION PWA ─────────────────────────────────────
+var deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Afficher le bandeau après 5 secondes
+  setTimeout(function() {
+    document.getElementById('pwa-banner').classList.add('visible');
+  }, 5000);
+});
+
+document.getElementById('pwa-install-btn').addEventListener('click', function() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(result) {
+    if (result.outcome === 'accepted') {
+      document.getElementById('pwa-banner').classList.remove('visible');
+    }
+    deferredPrompt = null;
+  });
+});
+
+document.getElementById('pwa-close-btn').addEventListener('click', function() {
+  document.getElementById('pwa-banner').classList.remove('visible');
+  deferredPrompt = null;
+});
+
+// Masquer si déjà installé
+window.addEventListener('appinstalled', function() {
+  document.getElementById('pwa-banner').classList.remove('visible');
+});
+
 </script>
+
+<!-- ── BANDEAU INSTALLATION PWA ── -->
+<div id="pwa-banner">
+  <span class="pwa-text">📲 Installer RouleCool sur votre écran d'accueil</span>
+  <button class="pwa-install" id="pwa-install-btn">Installer</button>
+  <button class="pwa-close" id="pwa-close-btn">✕</button>
+</div>
+
 </body>
 </html>
