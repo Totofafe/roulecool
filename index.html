@@ -1061,43 +1061,43 @@ function setStatus(type, msg) {
 
 // ── CHARGEMENT DONNÉES COLLABORATIVES ────────────────────
 async function loadMapData() {
-  const url = `${window.GRIST_CONFIG.baseUrl}/docs/${window.GRIST_CONFIG.docId}/tables/${window.GRIST_CONFIG.table}/records?limit=50000`;
-
+  const url = `${window.SUPABASE_CONFIG.url}/rest/v1/${window.SUPABASE_CONFIG.table}?select=*&limit=500000`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        'apikey': window.SUPABASE_CONFIG.key,
+        'Authorization': `Bearer ${window.SUPABASE_CONFIG.key}`
+      }
+    });
     if (!res.ok) return;
-    const data = await res.json();
-    const records = data.records || [];
-
+    const records = await res.json();
     if (records.length === 0) return;
 
-    // Regrouper par nom_trajet
+    // Regrouper par trajet
     const trajets = {};
-    for (const r of records) {
-      const f = r.fields;
+    for (const f of records) {
       const key = `${f.pseudo || 'anonyme'}__${f.nom_trajet || 'trajet'}__${f.date_trajet || ''}`;
       if (!trajets[key]) trajets[key] = [];
       trajets[key].push(f);
     }
 
-    // Couche dédiée aux données collaboratives
     const collaboLayer = L.layerGroup().addTo(map);
 
-for (const [key, points] of Object.entries(trajets)) {
+    for (const [key, points] of Object.entries(trajets)) {
       const [pseudo, nom, date] = key.split('__');
       const ptsFiltres = points.filter(p => p.latitude && p.longitude);
+      if (ptsFiltres.length === 0) continue;
+
       let segmentCoords = [];
       let couleurCourante = null;
 
       for (let i = 0; i < ptsFiltres.length; i++) {
         const p = ptsFiltres[i];
         const couleur = p.couleur || '#999';
-
         if (couleurCourante === null) {
           couleurCourante = couleur;
           segmentCoords = [[p.latitude, p.longitude]];
         } else if (couleur !== couleurCourante) {
-          // Ajouter le point de jonction au segment courant avant de tracer
           segmentCoords.push([p.latitude, p.longitude]);
           L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
             .bindPopup(`<div style="font-family:Arial;font-size:12px;">
@@ -1107,7 +1107,6 @@ for (const [key, points] of Object.entries(trajets)) {
               <hr style="margin:5px 0">
               <i style="color:#666;font-size:11px;">${pseudo} · ${nom}<br>${date}</i>
             </div>`).addTo(collaboLayer);
-          // Nouveau segment qui repart de ce même point de jonction
           couleurCourante = couleur;
           segmentCoords = [[p.latitude, p.longitude]];
         } else {
@@ -1115,7 +1114,6 @@ for (const [key, points] of Object.entries(trajets)) {
         }
       }
 
-      // Dernier segment
       if (segmentCoords.length > 1) {
         const last = ptsFiltres[ptsFiltres.length - 1];
         L.polyline(segmentCoords, { color: couleurCourante, weight: 5, opacity: 0.7 })
@@ -1128,27 +1126,29 @@ for (const [key, points] of Object.entries(trajets)) {
           </div>`).addTo(collaboLayer);
       }
     }
-    // Stats header
-    const pseudos = new Set(records.map(r => r.fields.pseudo).filter(Boolean));
+
+    // Stats
+    const pseudos = new Set(records.map(r => r.pseudo).filter(Boolean));
     document.getElementById('total-points').textContent = records.length.toLocaleString('fr');
     document.getElementById('total-contribs').textContent = pseudos.size;
 
-if (!positionMarker) {
+    // fitBounds si pas de position manuelle
+    if (!positionMarker) {
       var coords = [];
       var trajetsVus = {};
       for (var i = 0; i < records.length; i++) {
-        var f = records[i].fields;
+        var f = records[i];
         var key = f.nom_trajet || '';
         if (f.latitude && f.longitude && !trajetsVus[key]) {
           coords.push([f.latitude, f.longitude]);
           trajetsVus[key] = true;
         }
       }
-      if (coords.length > 0) { map.fitBounds(coords, { padding: [40, 40] }); }
+      if (coords.length > 0) map.fitBounds(coords, { padding: [40, 40] });
     }
 
   } catch(e) {
-    console.warn('Erreur chargement carte collaborative :', e);
+    console.warn('Erreur chargement carte :', e);
   }
 }
 
