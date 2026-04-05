@@ -1361,31 +1361,36 @@ var deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   deferredPrompt = e;
-  // Afficher le bandeau après 5 secondes
   setTimeout(function() {
     document.getElementById('pwa-banner').classList.add('visible');
   }, 5000);
 });
 
-document.getElementById('pwa-install-btn').addEventListener('click', function() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(function(result) {
-    if (result.outcome === 'accepted') {
-      document.getElementById('pwa-banner').classList.remove('visible');
-    }
-    deferredPrompt = null;
-  });
-});
-
-document.getElementById('pwa-close-btn').addEventListener('click', function() {
-  document.getElementById('pwa-banner').classList.remove('visible');
-  deferredPrompt = null;
-});
-
-// Masquer si déjà installé
 window.addEventListener('appinstalled', function() {
   document.getElementById('pwa-banner').classList.remove('visible');
+});
+
+window.addEventListener('load', function() {
+  var installBtn = document.getElementById('pwa-install-btn');
+  var closeBtn = document.getElementById('pwa-close-btn');
+  if (installBtn) {
+    installBtn.addEventListener('click', function() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function(result) {
+        if (result.outcome === 'accepted') {
+          document.getElementById('pwa-banner').classList.remove('visible');
+        }
+        deferredPrompt = null;
+      });
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      document.getElementById('pwa-banner').classList.remove('visible');
+      deferredPrompt = null;
+    });
+  }
 });
 
 </script>
