@@ -757,6 +757,12 @@ window.GRIST_CONFIG = {
   table: "Points"
 };
 
+window.SUPABASE_CONFIG = {
+  url: 'https://kmcihqktquuqrkwymsll.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttY2locWt0cXV1cXJrd3ltc2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzc5NzksImV4cCI6MjA5MDk1Mzk3OX0.Qbr4f--Ac7_Vxtr8RxYvd268oUSyAuPFwT8KtCNvdyg',
+  table: 'points'
+};
+
 // Tentative de chargement de config.js
 (function() {
   const s = document.createElement('script');
@@ -1014,6 +1020,19 @@ const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || "proxy";
     document.getElementById('btnSend').disabled = false;
   }
 }
+
+// Envoi vers Supabase en parallèle
+const urlSupabase = `${window.SUPABASE_CONFIG.url}/rest/v1/${window.SUPABASE_CONFIG.table}`;
+fetch(urlSupabase, {
+  method: 'POST',
+  headers: {
+    'apikey': window.SUPABASE_CONFIG.key,
+    'Authorization': `Bearer ${window.SUPABASE_CONFIG.key}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal'
+  },
+  body: JSON.stringify(points)
+}).catch(e => console.warn('Supabase :', e));
 
 // ── STATS GLOBALES ───────────────────────────────────────
 async function loadGlobalStats() {
