@@ -1012,7 +1012,21 @@ const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || "proxy";
       document.getElementById('progressLabel').textContent = `${sent} / ${total} points envoyés`;
     }
 
-    setStatus('success', `✅ ${total} points ajoutés à la carte collaborative !`);
+setStatus('success', `✅ ${total} points ajoutés à la carte collaborative !`);
+    
+    // Envoi vers Supabase en parallèle
+    const urlSupabase = `${window.SUPABASE_CONFIG.url}/rest/v1/${window.SUPABASE_CONFIG.table}`;
+    fetch(urlSupabase, {
+      method: 'POST',
+      headers: {
+        'apikey': window.SUPABASE_CONFIG.key,
+        'Authorization': `Bearer ${window.SUPABASE_CONFIG.key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(points)
+    }).catch(e => console.warn('Supabase :', e));
+
     loadGlobalStats();
 
   } catch(err) {
@@ -1020,19 +1034,6 @@ const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || "proxy";
     document.getElementById('btnSend').disabled = false;
   }
 }
-
-// Envoi vers Supabase en parallèle
-const urlSupabase = `${window.SUPABASE_CONFIG.url}/rest/v1/${window.SUPABASE_CONFIG.table}`;
-fetch(urlSupabase, {
-  method: 'POST',
-  headers: {
-    'apikey': window.SUPABASE_CONFIG.key,
-    'Authorization': `Bearer ${window.SUPABASE_CONFIG.key}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=minimal'
-  },
-  body: JSON.stringify(points)
-}).catch(e => console.warn('Supabase :', e));
 
 // ── STATS GLOBALES ───────────────────────────────────────
 async function loadGlobalStats() {
