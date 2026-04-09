@@ -466,6 +466,7 @@ let dernierAccel = { x: 0, y: 0, z: 9.81 };
 let timerInterval = null;
 let secondes = 0;
 let wakeLock = null;
+let accelRecu = false;
 let dateDepart = null;
 let nomTrajet = '';
 let vibSomme = 0;
@@ -496,8 +497,9 @@ function demarrerAccelerometrie() {
 function onDeviceMotion(event) {
   if (!enregistrement) return;
   const a = event.accelerationIncludingGravity;
-  if (a && a.x !== null) {
+  if (a && a.x !== null && a.x !== 0) {
     dernierAccel = { x: a.x, y: a.y, z: a.z };
+    accelRecu = true;
   }
 }
 
@@ -604,6 +606,12 @@ async function demarrer() {
   }
 
   demarrerAccelerometrie();
+  // Vérification différée que l'accéléromètre fonctionne
+setTimeout(function() {
+  if (enregistrement && !accelRecu) {
+    setStatus('error', '⚠️ Accéléromètre non détecté. Sur iPhone : Réglages > Safari > Confidentialité > Mouvement et orientation > Activer.');
+  }
+}, 4000);
   demarrerGPS();
   await activerWakeLock();
   demarrerTimer();
