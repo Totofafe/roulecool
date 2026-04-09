@@ -2,7 +2,7 @@
 // ⚠️ INCRÉMENTER LA VERSION À CHAQUE GIT PUSH (v1 → v2 → v3...)
 // Cela force le rechargement du cache sur les appareils des utilisateurs.
 
-const CACHE_NAME = 'roulecool-v28.01';
+const CACHE_NAME = 'roulecool-v28.02';
 
 // Fichiers à mettre en cache au premier chargement
 const CACHE_FILES = [
@@ -48,6 +48,11 @@ self.addEventListener('fetch', event => {
 
   // Ne pas intercepter les appels vers Grist/Cloudflare
   if (url.hostname.includes('workers.dev') || url.hostname.includes('grist')) {
+    return;
+  }
+
+  // Ne pas intercepter les appels Supabase (données temps réel)
+  if (url.hostname.includes('supabase.co')) {
     return;
   }
 
