@@ -479,12 +479,17 @@ function detecterIOS() {
 
 async function demanderAutorisationIOS() {
   if (typeof DeviceMotionEvent.requestPermission === 'function') {
-    const perm = await DeviceMotionEvent.requestPermission();
-    if (perm === 'granted') {
-      document.getElementById('iosWarning').classList.remove('visible');
-      demarrerAccelerometrie();
-    } else {
-      setStatus('error', '❌ Accès à l\'accéléromètre refusé.');
+    try {
+      const perm = await DeviceMotionEvent.requestPermission();
+      if (perm === 'granted') {
+        document.getElementById('iosWarning').classList.remove('visible');
+        // Masquer le bouton autorisation et lancer l'enregistrement complet
+        await demarrerComplet();
+      } else {
+        setStatus('error', '❌ Accès à l\'accéléromètre refusé. Vérifiez Réglages > Safari > Mouvement et orientation.');
+      }
+    } catch(e) {
+      setStatus('error', '❌ Erreur autorisation : ' + e.message);
     }
   }
 }
@@ -590,28 +595,32 @@ function demarrerTimer() {
 
 // ── DÉMARRER ─────────────────────────────────────────────
 async function demarrer() {
-  // Générer nom du trajet avec date/heure
-  const now = new Date();
-  dateDepart = now.toISOString().slice(0, 16).replace('T', ' ');
-  nomTrajet  = `Trajet ${now.toLocaleDateString('fr')} ${now.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'})}`;
-
+  dateDepart = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  nomTrajet = `Trajet ${new Date().toLocaleDateString('fr')} ${new Date().toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'})}`;
   points = [];
   vibSomme = 0;
   vibCount = 0;
+  accelRecu = false;
 
-  // iOS : demander autorisation accéléromètre
+  // iOS : demander autorisation d'abord
   if (detecterIOS() && typeof DeviceMotionEvent.requestPermission === 'function') {
     document.getElementById('iosWarning').classList.add('visible');
-    return;
+    return; // On attend que l'utilisateur clique "Autoriser"
   }
 
+  await demarrerComplet();
+}
+
+async function demarrerComplet() {
   demarrerAccelerometrie();
+
   // Vérification différée que l'accéléromètre fonctionne
-setTimeout(function() {
-  if (enregistrement && !accelRecu) {
-    setStatus('error', '⚠️ Accéléromètre non détecté. Sur iPhone : Réglages > Safari > Confidentialité > Mouvement et orientation > Activer.');
-  }
-}, 4000);
+  setTimeout(function() {
+    if (enregistrement && !accelRecu) {
+      setStatus('error', '⚠️ Accéléromètre non détecté. Sur iPhone : Réglages > Safari > Confidentialité > Mouvement et orientation > Activer.');
+    }
+  }, 4000);
+
   demarrerGPS();
   await activerWakeLock();
   demarrerTimer();
@@ -620,7 +629,7 @@ setTimeout(function() {
 
   // UI
   document.getElementById('btnStart').style.display = 'none';
-  document.getElementById('btnStop').style.display  = 'flex';
+  document.getElementById('btnStop').style.display = 'flex';
   document.getElementById('btnEnvoyer').classList.remove('visible');
   document.getElementById('etatIcon').classList.add('recording');
   document.getElementById('etatLabel').className = 'etat-label recording';
