@@ -322,31 +322,21 @@
     .status.error   { background: rgba(244,67,54,0.12); border: 1px solid rgba(244,67,54,0.3); color: #ff8a80; }
     .status.loading { background: rgba(165,214,167,0.08); border: 1px solid rgba(165,214,167,0.2); color: var(--dim); }
 
-    /* ── AVERTISSEMENT iOS ── */
-    .ios-warning {
-      background: rgba(249,168,37,0.1);
-      border: 1px solid rgba(249,168,37,0.4);
+    /* ── BLOC DIAGNOSTIC ── */
+    .diag {
+      background: rgba(165,214,167,0.05);
+      border: 1px solid rgba(165,214,167,0.15);
       border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 0.75rem;
-      color: #F9A825;
+      padding: 10px 12px;
+      font-size: 0.68rem;
+      color: var(--dim);
+      line-height: 1.5;
       display: none;
     }
-    .ios-warning.visible { display: block; }
-
-    .btn-ios-accel {
-      width: 100%;
-      margin-top: 10px;
-      padding: 10px;
-      background: rgba(249,168,37,0.2);
-      border: 1px solid #F9A825;
-      border-radius: 8px;
-      color: #F9A825;
-      font-family: 'Syne', sans-serif;
-      font-weight: 600;
-      font-size: 0.82rem;
-      cursor: pointer;
-    }
+    .diag.visible { display: block; }
+    .diag strong { color: var(--accent); font-weight: 600; }
+    .diag .ok { color: #81c784; }
+    .diag .ko { color: #ff8a80; }
   </style>
 </head>
 <body>
@@ -398,14 +388,6 @@
     <div class="score-vib" id="scoreVib"></div>
   </div>
 
-  <!-- Avertissement iOS -->
-  <div class="ios-warning" id="iosWarning">
-    ⚠️ Sur iOS, l'accès à l'accéléromètre nécessite votre autorisation.
-    <button class="btn-ios-accel" onclick="demanderAutorisationIOS()">
-      Autoriser l'accéléromètre
-    </button>
-  </div>
-
   <!-- Pseudo -->
   <div class="field">
     <label>Pseudo contributeur</label>
@@ -433,6 +415,9 @@
   </div>
 
   <div class="status" id="statusMsg"></div>
+
+  <!-- Bloc diagnostic (affiché uniquement en cas de problème) -->
+  <div class="diag" id="diagBlock"></div>
 
 </div>
 
@@ -472,26 +457,33 @@ let nomTrajet = '';
 let vibSomme = 0;
 let vibCount = 0;
 
-// ── iOS : demande autorisation accéléromètre ─────────────
+// ── HELPERS DIAGNOSTIC ───────────────────────────────────
 function detecterIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
 }
 
-async function demanderAutorisationIOS() {
-  if (typeof DeviceMotionEvent.requestPermission === 'function') {
-    try {
-      const perm = await DeviceMotionEvent.requestPermission();
-      if (perm === 'granted') {
-        document.getElementById('iosWarning').classList.remove('visible');
-        // Masquer le bouton autorisation et lancer l'enregistrement complet
-        await demarrerComplet();
-      } else {
-        setStatus('error', '❌ Accès à l\'accéléromètre refusé. Vérifiez Réglages > Safari > Mouvement et orientation.');
-      }
-    } catch(e) {
-      setStatus('error', '❌ Erreur autorisation : ' + e.message);
-    }
-  }
+function afficherDiagnostic(raison) {
+  const el = document.getElementById('diagBlock');
+  const secure = window.isSecureContext;
+  const hasDM = typeof DeviceMotionEvent !== 'undefined';
+  const needsPerm = hasDM && typeof DeviceMotionEvent.requestPermission === 'function';
+  const standalone = window.navigator.standalone === true
+                  || window.matchMedia('(display-mode: standalone)').matches;
+  const ua = navigator.userAgent;
+  const iosMatch = ua.match(/OS (\d+)_(\d+)/);
+  const iosVersion = iosMatch ? `${iosMatch[1]}.${iosMatch[2]}` : 'n/a';
+
+  el.innerHTML = `
+    <strong>Diagnostic technique</strong><br>
+    ${raison ? raison + '<br>' : ''}
+    HTTPS : <span class="${secure?'ok':'ko'}">${secure?'oui':'non'}</span> ·
+    DeviceMotionEvent : <span class="${hasDM?'ok':'ko'}">${hasDM?'oui':'non'}</span> ·
+    requestPermission : <span class="${needsPerm?'ok':'ko'}">${needsPerm?'requis (iOS 13+)':'non'}</span><br>
+    iOS : ${iosVersion} · PWA installée : ${standalone?'oui':'non'}<br>
+    <em style="color:var(--dim)">Réglages iOS → Safari → Avancé → Accès au mouvement et à l'orientation</em>
+  `;
+  el.classList.add('visible');
 }
 
 // ── ACCÉLÉROMÈTRE ────────────────────────────────────────
@@ -502,8 +494,9 @@ function demarrerAccelerometrie() {
 function onDeviceMotion(event) {
   if (!enregistrement) return;
   const a = event.accelerationIncludingGravity;
-  if (a && a.x !== null && a.x !== 0) {
-    dernierAccel = { x: a.x, y: a.y, z: a.z };
+  // Fix : ne pas exiger a.x !== 0 (un axe peut être 0 si immobile)
+  if (a && (a.x !== null || a.y !== null || a.z !== null)) {
+    dernierAccel = { x: a.x || 0, y: a.y || 0, z: a.z || 0 };
     accelRecu = true;
   }
 }
@@ -594,7 +587,42 @@ function demarrerTimer() {
 }
 
 // ── DÉMARRER ─────────────────────────────────────────────
+// IMPORTANT : sur iOS, requestPermission() DOIT être appelé directement
+// dans le gestionnaire du clic, avant tout await sur autre chose.
 async function demarrer() {
+  // 1. VÉRIFICATION HTTPS (requise pour les capteurs)
+  if (!window.isSecureContext) {
+    setStatus('error', '❌ Page non sécurisée (HTTPS requis pour les capteurs).');
+    afficherDiagnostic('Contexte non sécurisé détecté.');
+    return;
+  }
+
+  // 2. VÉRIFICATION API disponible
+  if (typeof DeviceMotionEvent === 'undefined') {
+    setStatus('error', '❌ Votre navigateur ne supporte pas les capteurs de mouvement.');
+    afficherDiagnostic('DeviceMotionEvent indisponible dans ce navigateur.');
+    return;
+  }
+
+  // 3. PERMISSION iOS — TOUT PREMIER APPEL après le clic, pas d'await avant.
+  //    Sans cela, iOS perd le « user activation flag » et refuse silencieusement.
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {
+    let perm;
+    try {
+      perm = await DeviceMotionEvent.requestPermission();
+    } catch(e) {
+      setStatus('error', '❌ ' + e.message + ' — Réessayez en cliquant à nouveau sur Démarrer.');
+      afficherDiagnostic('requestPermission a levé une exception : ' + e.message);
+      return;
+    }
+    if (perm !== 'granted') {
+      setStatus('error', '❌ Accès au mouvement refusé. Réglages iOS → Safari → Avancé → « Accès au mouvement et à l\'orientation ».');
+      afficherDiagnostic('Permission renvoyée : <strong>' + perm + '</strong>. Vérifiez le toggle dans Réglages iOS.');
+      return;
+    }
+  }
+
+  // 4. INITIALISATION (après permission accordée)
   dateDepart = new Date().toISOString().slice(0, 16).replace('T', ' ');
   nomTrajet = `Trajet ${new Date().toLocaleDateString('fr')} ${new Date().toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'})}`;
   points = [];
@@ -602,22 +630,18 @@ async function demarrer() {
   vibCount = 0;
   accelRecu = false;
 
-  // iOS : demander autorisation d'abord
-  if (detecterIOS() && typeof DeviceMotionEvent.requestPermission === 'function') {
-    document.getElementById('iosWarning').classList.add('visible');
-    return; // On attend que l'utilisateur clique "Autoriser"
-  }
-
+  // 5. DÉMARRAGE COMPLET
   await demarrerComplet();
 }
 
 async function demarrerComplet() {
   demarrerAccelerometrie();
 
-  // Vérification différée que l'accéléromètre fonctionne
+  // Vérification différée que l'accéléromètre envoie bien des événements
   setTimeout(function() {
     if (enregistrement && !accelRecu) {
-      setStatus('error', '⚠️ Accéléromètre non détecté. Sur iPhone : Réglages > Safari > Confidentialité > Mouvement et orientation > Activer.');
+      setStatus('error', '⚠️ Accéléromètre non détecté après 4 s.');
+      afficherDiagnostic('Aucun événement devicemotion reçu. Sur iPhone : Réglages → Safari → Avancé → « Accès au mouvement et à l\'orientation » doit être activé. En navigation privée, cette API est souvent désactivée.');
     }
   }, 4000);
 
@@ -631,6 +655,7 @@ async function demarrerComplet() {
   document.getElementById('btnStart').style.display = 'none';
   document.getElementById('btnStop').style.display = 'flex';
   document.getElementById('btnEnvoyer').classList.remove('visible');
+  document.getElementById('diagBlock').classList.remove('visible');
   document.getElementById('etatIcon').classList.add('recording');
   document.getElementById('etatLabel').className = 'etat-label recording';
   document.getElementById('etatLabel').textContent = '● Enregistrement en cours';
@@ -661,7 +686,7 @@ function arreter() {
   }
 }
 
-// ── ENVOYER VERS GRIST ────────────────────────────────────
+// ── ENVOYER VERS GRIST + SUPABASE ─────────────────────────
 async function envoyer() {
   const pseudo = document.getElementById('inputPseudo').value.trim() || 'anonyme';
   const apiKey = (window.GRIST_CONFIG && window.GRIST_CONFIG.apiKey) || 'proxy';
@@ -692,20 +717,20 @@ async function envoyer() {
       document.getElementById('progressLabel').textContent = `${sent} / ${total} points envoyés`;
     }
     setStatus('success', `🎉 ${total} points ajoutés à la carte collaborative !`);
-	
-	// Envoi vers Supabase en parallèle
-const urlSupabase = `${window.SUPABASE_CONFIG.url}/rest/v1/${window.SUPABASE_CONFIG.table}`;
-fetch(urlSupabase, {
-  method: 'POST',
-  headers: {
-    'apikey': window.SUPABASE_CONFIG.key,
-    'Authorization': `Bearer ${window.SUPABASE_CONFIG.key}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=minimal'
-  },
-  body: JSON.stringify(ptsAvecPseudo)
-}).catch(e => console.warn('Supabase :', e));
-	
+
+    // Envoi vers Supabase en parallèle
+    const urlSupabase = `${window.SUPABASE_CONFIG.url}/rest/v1/${window.SUPABASE_CONFIG.table}`;
+    fetch(urlSupabase, {
+      method: 'POST',
+      headers: {
+        'apikey': window.SUPABASE_CONFIG.key,
+        'Authorization': `Bearer ${window.SUPABASE_CONFIG.key}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(ptsAvecPseudo)
+    }).catch(e => console.warn('Supabase :', e));
+
     points = [];
   } catch(e) {
     setStatus('error', '❌ Erreur : ' + e.message);
