@@ -798,10 +798,9 @@ s.onerror = () => {};
 // ── CARTE LEAFLET ────────────────────────────────────────
 const map = L.map('map', { zoomControl: true }).setView([48.8566, 2.3522], 12);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CARTO',
-  subdomains: 'abcd',
-  maxZoom: 19
+L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_2wrk_1_c8b9aa8528e09a5ac6af6cd6', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  subdomains: 'abcd', maxZoom: 20
 }).addTo(map);
 
 // Bouton visée
